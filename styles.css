@@ -75,7 +75,7 @@ body {
 .main-content {
     flex: 1;
     display: grid;
-    grid-template-columns: 280px 1fr 320px;
+    grid-template-columns: 280px 1fr 480px; /* Increased from 320px to 480px (+50%) */
     gap: 0;
     height: calc(100vh - 60px); /* Fixed height instead of max-height */
     overflow: hidden; /* Prevent main content from scrolling */
@@ -235,6 +235,50 @@ button:disabled {
     z-index: 10; /* Higher than results panel */
 }
 
+/* Split Canvas Container */
+.split-canvas-container {
+    flex: 1;
+    display: flex;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.canvas-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #1e1e1e;
+    border: 1px solid #3e3e42;
+}
+
+.canvas-half.left-canvas {
+    border-right: 1px solid #4ec9b0; /* Green border for image side */
+}
+
+.canvas-half.right-canvas {
+    border-left: 1px solid #ff6b6b; /* Red border for dimensions side */
+}
+
+.canvas-header {
+    background: #2d2d30;
+    padding: 6px 12px;
+    border-bottom: 1px solid #3e3e42;
+    text-align: center;
+}
+
+.canvas-header h4 {
+    color: #cccccc;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 0 2px 0;
+}
+
+.canvas-header small {
+    color: #969696;
+    font-size: 9px;
+}
+
 .canvas-container {
     flex: 1;
     position: relative;
@@ -245,7 +289,7 @@ button:disabled {
     will-change: auto; /* Prevent unnecessary repaints */
 }
 
-#mainCanvas {
+#leftCanvas, #rightCanvas {
     display: block;
     max-width: 100%;
     max-height: 100%;
@@ -268,6 +312,10 @@ button:disabled {
 
 .canvas-overlay.hidden {
     display: none;
+}
+
+#rightCanvasOverlay {
+    background: rgba(45, 45, 48, 0.9); /* Slightly different background for right panel */
 }
 
 .canvas-instructions {
@@ -565,7 +613,7 @@ input[type="number"]:focus, input[type="text"]:focus {
 /* Responsive Design */
 @media (max-width: 1200px) {
     .main-content {
-        grid-template-columns: 240px 1fr 280px;
+        grid-template-columns: 240px 1fr 420px; /* Increased from 280px to 420px (+50%) */
     }
 
     .detail-view-images {
@@ -646,6 +694,7 @@ input[type="number"]:focus, input[type="text"]:focus {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    justify-content: space-between;
 }
 
 .shape-number {
@@ -665,6 +714,85 @@ input[type="number"]:focus, input[type="text"]:focus {
 .result-header h4 {
     margin: 0;
     flex-grow: 1;
+}
+
+.delete-shape-btn {
+    background: none;
+    border: none;
+    color: #969696;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.delete-shape-btn:hover {
+    background: #ff4757;
+    color: white;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.delete-shape-btn:active {
+    transform: scale(0.95);
+}
+
+/* Detailed measurement breakdown */
+.measurement-breakdown {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.measurement-breakdown p {
+    margin: 3px 0;
+    word-break: break-all;
+}
+
+/* Summary section */
+.summary-section {
+    margin-top: 16px;
+    padding: 12px;
+    background: #2d2d30;
+    border: 1px solid #4ec9b0;
+    border-radius: 6px;
+}
+
+.summary-section h3 {
+    color: #4ec9b0;
+    margin: 0 0 12px 0;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.summary-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-item {
+    padding: 8px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    border-left: 3px solid #4ec9b0;
+}
+
+.summary-item strong {
+    color: #cccccc;
+    font-size: 10px;
+}
+
+.calculation {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 9px;
+    color: #4ec9b0;
+    word-break: break-all;
+    line-height: 1.3;
+    display: block;
+    margin-top: 4px;
 }
 
 .result-details {

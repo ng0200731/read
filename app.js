@@ -1,11 +1,16 @@
 // Application Version
-const APP_VERSION = "1.2.3";
+const APP_VERSION = "1.3.0";
 
 // Main Application Controller
 class ImageAnalysisApp {
     constructor() {
-        this.canvas = null;
-        this.ctx = null;
+        // Left canvas (image + rectangles without dimensions)
+        this.leftCanvas = null;
+        this.leftCtx = null;
+        // Right canvas (rectangles only with dimensions)
+        this.rightCanvas = null;
+        this.rightCtx = null;
+
         this.image = null;
         this.originalImage = null; // Store original for rotation
         this.rotation = 0; // Current rotation in degrees
@@ -45,23 +50,36 @@ class ImageAnalysisApp {
     }
 
     setupCanvas() {
-        this.canvas = document.getElementById('mainCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        
-        // Set initial canvas size
+        // Setup left canvas (image + rectangles without dimensions)
+        this.leftCanvas = document.getElementById('leftCanvas');
+        this.leftCtx = this.leftCanvas.getContext('2d');
+
+        // Setup right canvas (rectangles only with dimensions)
+        this.rightCanvas = document.getElementById('rightCanvas');
+        this.rightCtx = this.rightCanvas.getContext('2d');
+
+        // Set initial canvas sizes
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
     }
 
     resizeCanvas() {
-        const container = this.canvas.parentElement;
-        const rect = container.getBoundingClientRect();
-        
-        this.canvas.width = rect.width - 20;
-        this.canvas.height = rect.height - 20;
-        
+        // Resize left canvas
+        const leftContainer = this.leftCanvas.parentElement;
+        const leftRect = leftContainer.getBoundingClientRect();
+
+        this.leftCanvas.width = leftRect.width - 20;
+        this.leftCanvas.height = leftRect.height - 20;
+
+        // Resize right canvas (same size as left)
+        const rightContainer = this.rightCanvas.parentElement;
+        const rightRect = rightContainer.getBoundingClientRect();
+
+        this.rightCanvas.width = rightRect.width - 20;
+        this.rightCanvas.height = rightRect.height - 20;
+
         if (this.image) {
-            this.drawImage();
+            this.drawBothCanvases();
         }
     }
 
@@ -166,11 +184,14 @@ class ImageAnalysisApp {
             this.rotateImage(90);
         });
 
-        // Canvas mouse events
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        // Canvas mouse events (only on left canvas where user draws)
+        this.leftCanvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.leftCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.leftCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.leftCanvas.addEventListener('wheel', (e) => this.handleWheel(e));
+
+        // Right canvas also needs wheel events for zoom synchronization
+        this.rightCanvas.addEventListener('wheel', (e) => this.handleWheel(e));
     }
 
     setupFileUpload() {
@@ -325,80 +346,183 @@ class ImageAnalysisApp {
             this.updateImageInfo();
             this.enableControls();
 
-            // Hide overlay
-            document.getElementById('canvasOverlay').classList.add('hidden');
+            // Hide overlays
+            document.getElementById('leftCanvasOverlay').classList.add('hidden');
+            document.getElementById('rightCanvasOverlay').classList.add('hidden');
         };
         img.src = src;
     }
 
-    drawImage() {
-        if (!this.image || !this.canvas || !this.ctx) return;
+    // Draw both canvases
+    drawBothCanvases() {
+        this.drawLeftCanvas();
+        this.drawRightCanvas();
+    }
+
+    // Draw left canvas (image + rectangles without dimensions)
+    drawLeftCanvas() {
+        if (!this.image || !this.leftCanvas || !this.leftCtx) return;
 
         // Store current canvas state to prevent interference
-        this.ctx.save();
+        this.leftCtx.save();
 
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.leftCtx.clearRect(0, 0, this.leftCanvas.width, this.leftCanvas.height);
 
         // Calculate image position and size
         const imgAspect = this.image.width / this.image.height;
-        const canvasAspect = this.canvas.width / this.canvas.height;
+        const canvasAspect = this.leftCanvas.width / this.leftCanvas.height;
 
         let drawWidth, drawHeight;
         if (imgAspect > canvasAspect) {
-            drawWidth = this.canvas.width * this.zoom;
+            drawWidth = this.leftCanvas.width * this.zoom;
             drawHeight = drawWidth / imgAspect;
         } else {
-            drawHeight = this.canvas.height * this.zoom;
+            drawHeight = this.leftCanvas.height * this.zoom;
             drawWidth = drawHeight * imgAspect;
         }
 
-        const x = (this.canvas.width - drawWidth) / 2 + this.panX;
-        const y = (this.canvas.height - drawHeight) / 2 + this.panY;
+        const x = (this.leftCanvas.width - drawWidth) / 2 + this.panX;
+        const y = (this.leftCanvas.height - drawHeight) / 2 + this.panY;
 
         // Ensure we have valid drawing coordinates
         if (isFinite(x) && isFinite(y) && isFinite(drawWidth) && isFinite(drawHeight) &&
             drawWidth > 0 && drawHeight > 0) {
-            this.ctx.drawImage(this.image, x, y, drawWidth, drawHeight);
+            this.leftCtx.drawImage(this.image, x, y, drawWidth, drawHeight);
         }
 
-        // Draw shapes
-        this.drawShapes();
+        // Draw shapes WITHOUT dimensions
+        this.drawShapesLeft();
 
         // Draw calibration points if calibrating
         if (this.isCalibrating) {
-            this.drawCalibrationPoints();
+            this.drawCalibrationPointsLeft();
         }
 
         // Restore canvas state
-        this.ctx.restore();
+        this.leftCtx.restore();
     }
 
-    drawShapes() {
-        // This will be implemented in canvas-tools.js
+    // Draw right canvas (rectangles only with dimensions)
+    drawRightCanvas() {
+        if (!this.rightCanvas || !this.rightCtx) return;
+
+        // Store current canvas state
+        this.rightCtx.save();
+
+        // Clear with a subtle background
+        this.rightCtx.fillStyle = '#1a1a1a';
+        this.rightCtx.fillRect(0, 0, this.rightCanvas.width, this.rightCanvas.height);
+
+        // Draw shapes WITH dimensions (no image background)
+        this.drawShapesRight();
+
+        // Restore canvas state
+        this.rightCtx.restore();
+    }
+
+    // Legacy method for compatibility - now calls drawBothCanvases
+    drawImage() {
+        this.drawBothCanvases();
+    }
+
+    // Draw shapes on left canvas (without dimensions)
+    drawShapesLeft() {
         if (window.CanvasTools) {
-            window.CanvasTools.drawShapes(this.ctx, this.shapes);
+            const imageInfo = this.getImageDrawInfoLeft();
+            window.CanvasTools.drawShapesWithoutDimensions(this.leftCtx, this.shapes, this.zoom, this.panX, this.panY, imageInfo);
         }
     }
 
-    drawCalibrationPoints() {
-        this.ctx.fillStyle = 'red';
-        this.ctx.strokeStyle = 'red';
-        this.ctx.lineWidth = 2;
+    // Draw shapes on right canvas (with dimensions)
+    drawShapesRight() {
+        if (window.CanvasTools) {
+            const imageInfo = this.getImageDrawInfoRight();
+            window.CanvasTools.drawShapesWithDimensions(this.rightCtx, this.shapes, this.zoom, this.panX, this.panY, imageInfo);
+        }
+    }
+
+    // Legacy method for compatibility
+    drawShapes() {
+        this.drawShapesLeft();
+    }
+
+    getImageDrawInfoLeft() {
+        if (!this.image) return null;
+
+        const canvasWidth = this.leftCanvas.width;
+        const canvasHeight = this.leftCanvas.height;
+
+        // Calculate scaled dimensions
+        const scaledWidth = this.image.width * this.zoom;
+        const scaledHeight = this.image.height * this.zoom;
+
+        // Calculate position (centered + pan offset)
+        const x = (canvasWidth - scaledWidth) / 2 + this.panX;
+        const y = (canvasHeight - scaledHeight) / 2 + this.panY;
+
+        return {
+            x: x,
+            y: y,
+            width: scaledWidth,
+            height: scaledHeight,
+            originalWidth: this.image.width,
+            originalHeight: this.image.height
+        };
+    }
+
+    getImageDrawInfoRight() {
+        if (!this.image) return null;
+
+        const canvasWidth = this.rightCanvas.width;
+        const canvasHeight = this.rightCanvas.height;
+
+        // Calculate scaled dimensions (same as left for synchronization)
+        const scaledWidth = this.image.width * this.zoom;
+        const scaledHeight = this.image.height * this.zoom;
+
+        // Calculate position (centered + pan offset)
+        const x = (canvasWidth - scaledWidth) / 2 + this.panX;
+        const y = (canvasHeight - scaledHeight) / 2 + this.panY;
+
+        return {
+            x: x,
+            y: y,
+            width: scaledWidth,
+            height: scaledHeight,
+            originalWidth: this.image.width,
+            originalHeight: this.image.height
+        };
+    }
+
+    // Legacy method for compatibility
+    getImageDrawInfo() {
+        return this.getImageDrawInfoLeft();
+    }
+
+    drawCalibrationPointsLeft() {
+        this.leftCtx.fillStyle = 'red';
+        this.leftCtx.strokeStyle = 'red';
+        this.leftCtx.lineWidth = 2;
 
         this.calibrationPoints.forEach((point, index) => {
-            this.ctx.beginPath();
-            this.ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            this.ctx.fill();
-            
-            this.ctx.fillText(`P${index + 1}`, point.x + 10, point.y - 10);
+            this.leftCtx.beginPath();
+            this.leftCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+            this.leftCtx.fill();
+
+            this.leftCtx.fillText(`P${index + 1}`, point.x + 10, point.y - 10);
         });
 
         if (this.calibrationPoints.length === 2) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.calibrationPoints[0].x, this.calibrationPoints[0].y);
-            this.ctx.lineTo(this.calibrationPoints[1].x, this.calibrationPoints[1].y);
-            this.ctx.stroke();
+            this.leftCtx.beginPath();
+            this.leftCtx.moveTo(this.calibrationPoints[0].x, this.calibrationPoints[0].y);
+            this.leftCtx.lineTo(this.calibrationPoints[1].x, this.calibrationPoints[1].y);
+            this.leftCtx.stroke();
         }
+    }
+
+    // Legacy method for compatibility
+    drawCalibrationPoints() {
+        this.drawCalibrationPointsLeft();
     }
 
     updateImageInfo() {
@@ -428,7 +552,7 @@ class ImageAnalysisApp {
 
     // Mouse event handlers
     handleMouseDown(e) {
-        const rect = this.canvas.getBoundingClientRect();
+        const rect = this.leftCanvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -443,7 +567,7 @@ class ImageAnalysisApp {
     }
 
     handleMouseMove(e) {
-        const rect = this.canvas.getBoundingClientRect();
+        const rect = this.leftCanvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -605,6 +729,7 @@ class ImageAnalysisApp {
         let html = '';
         this.shapes.forEach((shape, index) => {
             const area = this.calculateShapeArea(shape);
+            const details = this.calculateDetailedMeasurements(shape);
             const shapeClass = shape.type.replace('-', '');
             const shapeNumber = index + 1;
 
@@ -618,19 +743,80 @@ class ImageAnalysisApp {
             };
             const shapeColor = colors[shapeClass] || '#cccccc';
 
+            // Format detailed calculations
+            const lengthBreakdown = details.lengths.length > 0 ?
+                details.lengths.map(l => l.toFixed(1)).join(' + ') + ' = ' + details.lengths.reduce((sum, l) => sum + l, 0).toFixed(1) :
+                '0';
+
+            const widthBreakdown = details.widths.length > 0 ?
+                details.widths.map(w => w.toFixed(1)).join(' + ') + ' = ' + details.widths.reduce((sum, w) => sum + w, 0).toFixed(1) :
+                '0';
+
             html += `
                 <div class="result-item ${shapeClass}" data-shape-index="${index}">
                     <div class="result-header">
                         <span class="shape-number" style="background-color: ${shapeColor};">${shapeNumber}</span>
                         <h4>${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}</h4>
+                        <button class="delete-shape-btn" data-shape-index="${index}" title="Delete this shape">🗑️</button>
                     </div>
                     <div class="result-details">
-                        <p><strong>Area:</strong> ${area.toFixed(2)} mm²</p>
-                        <p><strong>Perimeter:</strong> ${this.calculateShapePerimeter(shape).toFixed(2)} mm</p>
+                        <div class="measurement-breakdown">
+                            <p><strong>Length:</strong> ${lengthBreakdown} mm</p>
+                            <p><strong>Width:</strong> ${widthBreakdown} mm</p>
+                            <p><strong>Area:</strong> ${area.toFixed(2)} mm²</p>
+                            <p><strong>Perimeter:</strong> ${this.calculateShapePerimeter(shape).toFixed(2)} mm</p>
+                        </div>
                     </div>
                 </div>
             `;
         });
+
+        // Add summary calculations
+        if (this.shapes.length > 0) {
+            const totalLengths = [];
+            const totalWidths = [];
+            const totalAreas = [];
+
+            this.shapes.forEach(shape => {
+                const details = this.calculateDetailedMeasurements(shape);
+                totalLengths.push(...details.lengths);
+                totalWidths.push(...details.widths);
+                totalAreas.push(details.area);
+            });
+
+            const lengthSum = totalLengths.reduce((sum, l) => sum + l, 0);
+            const widthSum = totalWidths.reduce((sum, w) => sum + w, 0);
+            const areaSum = totalAreas.reduce((sum, a) => sum + a, 0);
+
+            const lengthBreakdown = totalLengths.length > 0 ?
+                totalLengths.map(l => l.toFixed(1)).join(' + ') + ' = ' + lengthSum.toFixed(1) : '0';
+
+            const widthBreakdown = totalWidths.length > 0 ?
+                totalWidths.map(w => w.toFixed(1)).join(' + ') + ' = ' + widthSum.toFixed(1) : '0';
+
+            const areaBreakdown = totalAreas.length > 0 ?
+                totalAreas.map(a => a.toFixed(1)).join(' + ') + ' = ' + areaSum.toFixed(1) : '0';
+
+            html += `
+                <div class="summary-section">
+                    <h3>📊 Total Calculations</h3>
+                    <div class="summary-details">
+                        <div class="summary-item">
+                            <strong>Total Length:</strong><br>
+                            <span class="calculation">${lengthBreakdown} mm</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>Total Width:</strong><br>
+                            <span class="calculation">${widthBreakdown} mm</span>
+                        </div>
+                        <div class="summary-item">
+                            <strong>Total Area:</strong><br>
+                            <span class="calculation">${areaBreakdown} mm²</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
         resultsArea.innerHTML = html;
 
@@ -640,6 +826,7 @@ class ImageAnalysisApp {
 
     setupResultHoverEffects() {
         const resultItems = document.querySelectorAll('.result-item');
+        const deleteButtons = document.querySelectorAll('.delete-shape-btn');
 
         // Simple, clean event handling - let CSS handle the isolation
         resultItems.forEach((item, index) => {
@@ -655,8 +842,20 @@ class ImageAnalysisApp {
                 this.focusOnShape(index);
             });
 
-            item.addEventListener('click', () => {
-                this.selectShape(index);
+            item.addEventListener('click', (e) => {
+                // Don't select if clicking on delete button
+                if (!e.target.classList.contains('delete-shape-btn')) {
+                    this.selectShape(index);
+                }
+            });
+        });
+
+        // Handle delete button clicks
+        deleteButtons.forEach((button) => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering result item click
+                const shapeIndex = parseInt(button.dataset.shapeIndex);
+                this.deleteShape(shapeIndex);
             });
         });
     }
@@ -829,6 +1028,63 @@ class ImageAnalysisApp {
         return 0;
     }
 
+    // Calculate detailed measurements for a shape
+    calculateDetailedMeasurements(shape) {
+        const details = {
+            lengths: [],
+            widths: [],
+            area: 0,
+            perimeter: 0
+        };
+
+        switch (shape.type) {
+            case 'rectangle':
+                const width = shape.width / this.scale;
+                const height = shape.height / this.scale;
+                details.lengths = [width]; // Single side length only
+                details.widths = [height]; // Single side width only
+                details.area = width * height;
+                details.perimeter = 2 * (width + height);
+                break;
+
+            case 'circle':
+                const radius = shape.radius / this.scale;
+                const diameter = 2 * radius;
+                details.lengths = [diameter]; // Diameter as length
+                details.widths = [diameter]; // Diameter as width
+                details.area = Math.PI * radius * radius;
+                details.perimeter = 2 * Math.PI * radius;
+                break;
+
+            case 'polygon':
+            case 'detected-contour':
+                if (shape.points && shape.points.length >= 3) {
+                    // Calculate all edge lengths
+                    const edgeLengths = [];
+                    for (let i = 0; i < shape.points.length; i++) {
+                        const current = shape.points[i];
+                        const next = shape.points[(i + 1) % shape.points.length];
+                        const length = Math.sqrt(
+                            Math.pow(next.x - current.x, 2) +
+                            Math.pow(next.y - current.y, 2)
+                        ) / this.scale;
+                        edgeLengths.push(length);
+                    }
+
+                    // For polygons, separate into lengths and widths based on orientation
+                    // This is a simplified approach - could be enhanced for complex shapes
+                    details.lengths = edgeLengths.filter((_, index) => index % 2 === 0);
+                    details.widths = edgeLengths.filter((_, index) => index % 2 === 1);
+
+                    details.perimeter = edgeLengths.reduce((sum, length) => sum + length, 0);
+                    details.area = this.calculateShapeArea(shape);
+                }
+                break;
+        }
+
+        return details;
+    }
+
     calculateShapePerimeter(shape) {
         if (window.Calculator) {
             return window.Calculator.calculatePerimeter(shape, this.scale);
@@ -975,8 +1231,9 @@ class ImageAnalysisApp {
             this.updateImageInfo();
             this.updateZoomLevel();
 
-            // Show overlay
-            document.getElementById('canvasOverlay').classList.remove('hidden');
+            // Show overlays
+            document.getElementById('leftCanvasOverlay').classList.remove('hidden');
+            document.getElementById('rightCanvasOverlay').classList.remove('hidden');
 
             // Disable controls
             const buttons = [
@@ -1036,6 +1293,28 @@ class ImageAnalysisApp {
         rotatedImg.src = canvas.toDataURL();
 
         console.log(`Image rotated to ${this.rotation}°`);
+    }
+
+    // Delete Shape Method
+    deleteShape(shapeIndex) {
+        if (shapeIndex < 0 || shapeIndex >= this.shapes.length) return;
+
+        const shapeType = this.shapes[shapeIndex].type;
+        const shapeNumber = shapeIndex + 1;
+
+        if (confirm(`Delete ${shapeType} #${shapeNumber}?`)) {
+            // Remove the shape from the array
+            this.shapes.splice(shapeIndex, 1);
+
+            // Clear any selection
+            this.clearShapeSelection();
+
+            // Redraw and update
+            this.drawImage();
+            this.updateResults();
+
+            console.log(`Deleted ${shapeType} #${shapeNumber}`);
+        }
     }
 }
 

@@ -6,14 +6,31 @@ window.CanvasTools = {
     polygonPoints: [],
 
     // Main drawing function for all shapes
-    drawShapes(ctx, shapes) {
+    drawShapes(ctx, shapes, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
         shapes.forEach((shape, index) => {
-            this.drawShape(ctx, shape, index + 1);
+            this.drawShape(ctx, shape, index + 1, zoom, panX, panY, imageInfo);
         });
     },
 
-    drawShape(ctx, shape, shapeNumber = null) {
+    // Draw shapes without dimensions (for left canvas)
+    drawShapesWithoutDimensions(ctx, shapes, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
+        shapes.forEach((shape, index) => {
+            this.drawShapeWithoutDimensions(ctx, shape, index + 1, zoom, panX, panY, imageInfo);
+        });
+    },
+
+    // Draw shapes with dimensions (for right canvas)
+    drawShapesWithDimensions(ctx, shapes, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
+        shapes.forEach((shape, index) => {
+            this.drawShapeWithDimensions(ctx, shape, index + 1, zoom, panX, panY, imageInfo);
+        });
+    },
+
+    drawShape(ctx, shape, shapeNumber = null, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
         ctx.save();
+
+        // Transform coordinates to match zoomed and panned image
+        const transformedShape = this.transformShapeCoordinates(shape, zoom, panX, panY, imageInfo);
 
         // Set vibrant colors based on shape type
         const colors = {
@@ -27,40 +44,169 @@ window.CanvasTools = {
 
         ctx.strokeStyle = shape.color || shapeColors.stroke;
         ctx.fillStyle = shape.fillColor || shapeColors.fill;
-        ctx.lineWidth = shape.lineWidth || 2;
+        // Scale line width with zoom for better visibility
+        ctx.lineWidth = (shape.lineWidth || 2) * zoom;
 
-        switch (shape.type) {
+        switch (transformedShape.type) {
             case 'rectangle':
-                this.drawRectangle(ctx, shape);
+                this.drawRectangle(ctx, transformedShape);
                 break;
             case 'circle':
-                this.drawCircle(ctx, shape);
+                this.drawCircle(ctx, transformedShape);
                 break;
             case 'polygon':
-                this.drawPolygon(ctx, shape);
+                this.drawPolygon(ctx, transformedShape);
                 break;
             case 'detected-contour':
-                this.drawContour(ctx, shape);
+                this.drawContour(ctx, transformedShape);
                 break;
         }
 
         // Draw number label if provided
         if (shapeNumber !== null) {
-            this.drawShapeNumber(ctx, shape, shapeNumber, shapeColors.stroke);
+            this.drawShapeNumber(ctx, transformedShape, shapeNumber, shapeColors.stroke, zoom);
         }
 
         ctx.restore();
     },
 
+    // Draw shape without dimensions (for left canvas)
+    drawShapeWithoutDimensions(ctx, shape, shapeNumber = null, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
+        ctx.save();
+
+        // Transform coordinates to match zoomed and panned image
+        const transformedShape = this.transformShapeCoordinates(shape, zoom, panX, panY, imageInfo);
+
+        // Set vibrant colors based on shape type
+        const colors = {
+            'rectangle': { stroke: '#ff6b6b', fill: 'rgba(255, 107, 107, 0.15)' },
+            'circle': { stroke: '#4ecdc4', fill: 'rgba(78, 205, 196, 0.15)' },
+            'polygon': { stroke: '#45b7d1', fill: 'rgba(69, 183, 209, 0.15)' },
+            'detected-contour': { stroke: '#f9ca24', fill: 'rgba(249, 202, 36, 0.15)' }
+        };
+
+        const shapeColors = colors[shape.type] || { stroke: '#cccccc', fill: 'rgba(204, 204, 204, 0.15)' };
+
+        ctx.strokeStyle = shape.color || shapeColors.stroke;
+        ctx.fillStyle = shape.fillColor || shapeColors.fill;
+        // Scale line width with zoom for better visibility
+        ctx.lineWidth = (shape.lineWidth || 2) * zoom;
+
+        switch (transformedShape.type) {
+            case 'rectangle':
+                this.drawRectangleWithoutDimensions(ctx, transformedShape);
+                break;
+            case 'circle':
+                this.drawCircle(ctx, transformedShape);
+                break;
+            case 'polygon':
+                this.drawPolygon(ctx, transformedShape);
+                break;
+            case 'detected-contour':
+                this.drawContour(ctx, transformedShape);
+                break;
+        }
+
+        // Draw number label if provided
+        if (shapeNumber !== null) {
+            this.drawShapeNumber(ctx, transformedShape, shapeNumber, shapeColors.stroke, zoom);
+        }
+
+        ctx.restore();
+    },
+
+    // Draw shape with dimensions (for right canvas)
+    drawShapeWithDimensions(ctx, shape, shapeNumber = null, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
+        ctx.save();
+
+        // Transform coordinates to match zoomed and panned image
+        const transformedShape = this.transformShapeCoordinates(shape, zoom, panX, panY, imageInfo);
+
+        // Set vibrant colors based on shape type
+        const colors = {
+            'rectangle': { stroke: '#ff6b6b', fill: 'rgba(255, 107, 107, 0.15)' },
+            'circle': { stroke: '#4ecdc4', fill: 'rgba(78, 205, 196, 0.15)' },
+            'polygon': { stroke: '#45b7d1', fill: 'rgba(69, 183, 209, 0.15)' },
+            'detected-contour': { stroke: '#f9ca24', fill: 'rgba(249, 202, 36, 0.15)' }
+        };
+
+        const shapeColors = colors[shape.type] || { stroke: '#cccccc', fill: 'rgba(204, 204, 204, 0.15)' };
+
+        ctx.strokeStyle = shape.color || shapeColors.stroke;
+        ctx.fillStyle = shape.fillColor || shapeColors.fill;
+        // Scale line width with zoom for better visibility
+        ctx.lineWidth = (shape.lineWidth || 2) * zoom;
+
+        switch (transformedShape.type) {
+            case 'rectangle':
+                this.drawRectangle(ctx, transformedShape); // This includes dimensions
+                break;
+            case 'circle':
+                this.drawCircle(ctx, transformedShape);
+                break;
+            case 'polygon':
+                this.drawPolygon(ctx, transformedShape);
+                break;
+            case 'detected-contour':
+                this.drawContour(ctx, transformedShape);
+                break;
+        }
+
+        // Draw number label if provided
+        if (shapeNumber !== null) {
+            this.drawShapeNumber(ctx, transformedShape, shapeNumber, shapeColors.stroke, zoom);
+        }
+
+        ctx.restore();
+    },
+
+    // Transform shape coordinates to match zoomed and panned image
+    transformShapeCoordinates(shape, zoom, panX, panY, imageInfo) {
+        if (!imageInfo) return shape; // No transformation if no image info
+
+        const transformedShape = { ...shape };
+
+        // Calculate the scale factor from original image to current display
+        const scaleX = imageInfo.width / imageInfo.originalWidth;
+        const scaleY = imageInfo.height / imageInfo.originalHeight;
+
+        switch (shape.type) {
+            case 'rectangle':
+                transformedShape.x = imageInfo.x + (shape.x * scaleX);
+                transformedShape.y = imageInfo.y + (shape.y * scaleY);
+                transformedShape.width = shape.width * scaleX;
+                transformedShape.height = shape.height * scaleY;
+                break;
+
+            case 'circle':
+                transformedShape.centerX = imageInfo.x + (shape.centerX * scaleX);
+                transformedShape.centerY = imageInfo.y + (shape.centerY * scaleY);
+                transformedShape.radius = shape.radius * scaleX; // Use scaleX for radius
+                break;
+
+            case 'polygon':
+            case 'detected-contour':
+                if (shape.points && shape.points.length > 0) {
+                    transformedShape.points = shape.points.map(point => ({
+                        x: imageInfo.x + (point.x * scaleX),
+                        y: imageInfo.y + (point.y * scaleY)
+                    }));
+                }
+                break;
+        }
+
+        return transformedShape;
+    },
+
     drawRectangle(ctx, shape) {
         const width = shape.width;
         const height = shape.height;
-        
+
         ctx.beginPath();
         ctx.rect(shape.x, shape.y, width, height);
         ctx.fill();
         ctx.stroke();
-        
+
         // Draw corner handles
         this.drawHandles(ctx, [
             { x: shape.x, y: shape.y },
@@ -68,6 +214,66 @@ window.CanvasTools = {
             { x: shape.x + width, y: shape.y + height },
             { x: shape.x, y: shape.y + height }
         ]);
+
+        // Draw permanent dimension labels
+        this.drawRectangleDimensions(ctx, shape);
+    },
+
+    // Draw rectangle without dimensions (for left canvas)
+    drawRectangleWithoutDimensions(ctx, shape) {
+        const width = shape.width;
+        const height = shape.height;
+
+        ctx.beginPath();
+        ctx.rect(shape.x, shape.y, width, height);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw corner handles
+        this.drawHandles(ctx, [
+            { x: shape.x, y: shape.y },
+            { x: shape.x + width, y: shape.y },
+            { x: shape.x + width, y: shape.y + height },
+            { x: shape.x, y: shape.y + height }
+        ]);
+
+        // NO dimension labels for clean view
+    },
+
+    // Draw permanent dimension labels for rectangle
+    drawRectangleDimensions(ctx, shape) {
+        if (!shape.scale) return; // Need scale to show dimensions
+
+        const widthMM = Math.abs(shape.width) / shape.scale;
+        const heightMM = Math.abs(shape.height) / shape.scale;
+
+        ctx.save();
+        ctx.fillStyle = '#ffff00'; // Bright yellow
+        ctx.strokeStyle = '#000000'; // Black outline
+        ctx.lineWidth = 1;
+        ctx.font = '12px Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Length text at top of rectangle
+        const topX = shape.x + shape.width / 2;
+        const topY = shape.y - 8; // 8px above rectangle
+        const lengthText = `${widthMM.toFixed(1)} mm`;
+
+        ctx.strokeText(lengthText, topX, topY);
+        ctx.fillText(lengthText, topX, topY);
+
+        // Width text at left of rectangle
+        ctx.save();
+        ctx.translate(shape.x - 8, shape.y + shape.height / 2); // 8px left of rectangle
+        ctx.rotate(-Math.PI / 2); // Rotate 90 degrees for vertical text
+        const widthText = `${heightMM.toFixed(1)} mm`;
+
+        ctx.strokeText(widthText, 0, 0);
+        ctx.fillText(widthText, 0, 0);
+        ctx.restore();
+
+        ctx.restore();
     },
 
     drawCircle(ctx, shape) {
@@ -131,20 +337,23 @@ window.CanvasTools = {
         });
     },
 
-    drawShapeNumber(ctx, shape, number, strokeColor) {
+    drawShapeNumber(ctx, shape, number, strokeColor, zoom = 1) {
         // Calculate the position for the number label
         let labelX, labelY;
+
+        // Scale offset distances with zoom
+        const offsetScale = Math.max(0.5, Math.min(2, zoom)); // Clamp scaling for readability
 
         switch (shape.type) {
             case 'rectangle':
                 // Position at top-left corner with offset
-                labelX = shape.x - 25;
-                labelY = shape.y - 5;
+                labelX = shape.x - (25 * offsetScale);
+                labelY = shape.y - (5 * offsetScale);
                 break;
             case 'circle':
                 // Position at top of circle
-                labelX = shape.centerX - 15;
-                labelY = shape.centerY - shape.radius - 15;
+                labelX = shape.centerX - (15 * offsetScale);
+                labelY = shape.centerY - shape.radius - (15 * offsetScale);
                 break;
             case 'polygon':
             case 'detected-contour':
@@ -152,8 +361,8 @@ window.CanvasTools = {
                 if (shape.points && shape.points.length > 0) {
                     const topPoint = shape.points.reduce((top, point) =>
                         point.y < top.y ? point : top, shape.points[0]);
-                    labelX = topPoint.x - 15;
-                    labelY = topPoint.y - 15;
+                    labelX = topPoint.x - (15 * offsetScale);
+                    labelY = topPoint.y - (15 * offsetScale);
                 } else {
                     labelX = 0;
                     labelY = 0;
@@ -164,24 +373,74 @@ window.CanvasTools = {
                 labelY = 0;
         }
 
-        // Draw number background circle
+        // Draw number background circle - scale with zoom
         ctx.save();
         ctx.fillStyle = strokeColor;
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * offsetScale;
 
-        const radius = 12;
+        const radius = 12 * offsetScale;
         ctx.beginPath();
         ctx.arc(labelX, labelY, radius, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
 
-        // Draw number text
+        // Draw number text - scale font with zoom
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Arial';
+        const fontSize = Math.max(10, 14 * offsetScale); // Minimum readable size
+        ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(number.toString(), labelX, labelY);
+
+        ctx.restore();
+    },
+
+    // Convert canvas coordinates to image coordinates
+    canvasToImageCoords(canvasX, canvasY, app) {
+        const imageInfo = app.getImageDrawInfo();
+        if (!imageInfo) return { x: canvasX, y: canvasY };
+
+        // Convert from canvas space to image space
+        const imageX = (canvasX - imageInfo.x) * (imageInfo.originalWidth / imageInfo.width);
+        const imageY = (canvasY - imageInfo.y) * (imageInfo.originalHeight / imageInfo.height);
+
+        return { x: imageX, y: imageY };
+    },
+
+    // Show dimensions while dragging rectangle
+    showDimensionsWhileDragging(ctx, shape, app) {
+        if (shape.type !== 'rectangle') return;
+
+        const imageInfo = app.getImageDrawInfo();
+        if (!imageInfo) return;
+
+        // Convert shape dimensions to real-world units
+        const widthMM = Math.abs(shape.width) / app.scale;
+        const heightMM = Math.abs(shape.height) / app.scale;
+
+        // Transform shape coordinates to canvas space for display
+        const transformedShape = this.transformShapeCoordinates(shape, app.zoom, app.panX, app.panY, imageInfo);
+
+        // Calculate position for dimension text (center of rectangle)
+        const centerX = transformedShape.x + transformedShape.width / 2;
+        const centerY = transformedShape.y + transformedShape.height / 2;
+
+        // Draw dimension text
+        ctx.save();
+        ctx.fillStyle = '#ffff00'; // Bright yellow for visibility
+        ctx.strokeStyle = '#000000'; // Black outline
+        ctx.lineWidth = 2;
+        ctx.font = '14px Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const dimensionText = `${widthMM.toFixed(1)} × ${heightMM.toFixed(1)} mm`;
+
+        // Draw text outline
+        ctx.strokeText(dimensionText, centerX, centerY);
+        // Draw text fill
+        ctx.fillText(dimensionText, centerX, centerY);
 
         ctx.restore();
     },
@@ -191,15 +450,18 @@ window.CanvasTools = {
         this.isDrawing = true;
         this.startPoint = { x, y };
 
+        // Convert canvas coordinates to image coordinates
+        const imageCoords = this.canvasToImageCoords(x, y, app);
+
         switch (tool) {
             case 'rectangle':
-                this.startRectangle(x, y);
+                this.startRectangle(imageCoords.x, imageCoords.y);
                 break;
             case 'circle':
-                this.startCircle(x, y);
+                this.startCircle(imageCoords.x, imageCoords.y);
                 break;
             case 'polygon':
-                this.addPolygonPoint(x, y, app);
+                this.addPolygonPoint(imageCoords.x, imageCoords.y, app);
                 break;
         }
     },
@@ -207,12 +469,15 @@ window.CanvasTools = {
     handleMouseMove(x, y, tool, app) {
         if (!this.isDrawing && tool !== 'polygon') return;
 
+        // Convert canvas coordinates to image coordinates
+        const imageCoords = this.canvasToImageCoords(x, y, app);
+
         switch (tool) {
             case 'rectangle':
-                this.updateRectangle(x, y, app);
+                this.updateRectangle(imageCoords.x, imageCoords.y, app);
                 break;
             case 'circle':
-                this.updateCircle(x, y, app);
+                this.updateCircle(imageCoords.x, imageCoords.y, app);
                 break;
         }
     },
@@ -233,31 +498,36 @@ window.CanvasTools = {
             width: 0,
             height: 0
         };
+        // Store start point in image coordinates
+        this.startPointImage = { x, y };
     },
 
     updateRectangle(x, y, app) {
         if (!this.currentShape) return;
 
-        this.currentShape.width = x - this.startPoint.x;
-        this.currentShape.height = y - this.startPoint.y;
-        
+        this.currentShape.width = x - this.startPointImage.x;
+        this.currentShape.height = y - this.startPointImage.y;
+
         // Handle negative dimensions
         if (this.currentShape.width < 0) {
             this.currentShape.x = x;
             this.currentShape.width = Math.abs(this.currentShape.width);
         } else {
-            this.currentShape.x = this.startPoint.x;
+            this.currentShape.x = this.startPointImage.x;
         }
-        
+
         if (this.currentShape.height < 0) {
             this.currentShape.y = y;
             this.currentShape.height = Math.abs(this.currentShape.height);
         } else {
-            this.currentShape.y = this.startPoint.y;
+            this.currentShape.y = this.startPointImage.y;
         }
 
-        app.drawImage();
-        this.drawShape(app.ctx, this.currentShape);
+        app.drawBothCanvases();
+        this.drawShapeWithoutDimensions(app.leftCtx, this.currentShape, null, app.zoom, app.panX, app.panY, app.getImageDrawInfoLeft());
+
+        // Show dimensions while dragging on left canvas
+        this.showDimensionsWhileDragging(app.leftCtx, this.currentShape, app);
     },
 
     // Circle tool
@@ -268,6 +538,8 @@ window.CanvasTools = {
             centerY: y,
             radius: 0
         };
+        // Store start point in image coordinates
+        this.startPointImage = { x, y };
     },
 
     updateCircle(x, y, app) {
@@ -277,8 +549,8 @@ window.CanvasTools = {
         const dy = y - this.currentShape.centerY;
         this.currentShape.radius = Math.sqrt(dx * dx + dy * dy);
 
-        app.drawImage();
-        this.drawShape(app.ctx, this.currentShape);
+        app.drawBothCanvases();
+        this.drawShapeWithoutDimensions(app.leftCtx, this.currentShape, null, app.zoom, app.panX, app.panY, app.getImageDrawInfoLeft());
     },
 
     // Polygon tool
@@ -312,8 +584,8 @@ window.CanvasTools = {
         this.polygonPoints.push({ x, y });
         this.currentShape.points = [...this.polygonPoints];
 
-        app.drawImage();
-        this.drawShape(app.ctx, this.currentShape);
+        app.drawBothCanvases();
+        this.drawShapeWithoutDimensions(app.leftCtx, this.currentShape, null, app.zoom, app.panX, app.panY, app.getImageDrawInfoLeft());
     },
 
     finishShape(tool, app) {
@@ -321,13 +593,17 @@ window.CanvasTools = {
 
         // Only add valid shapes
         if (tool === 'rectangle' && (this.currentShape.width > 5 && this.currentShape.height > 5)) {
+            // Add scale to rectangle for dimension display
+            this.currentShape.scale = app.scale;
             app.shapes.push(this.currentShape);
         } else if (tool === 'circle' && this.currentShape.radius > 5) {
+            // Add scale to circle for dimension display
+            this.currentShape.scale = app.scale;
             app.shapes.push(this.currentShape);
         }
 
         this.currentShape = null;
-        app.drawImage();
+        app.drawBothCanvases();
         app.updateResults();
     },
 
