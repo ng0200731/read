@@ -1,9 +1,14 @@
+// Application Version
+const APP_VERSION = "1.2.3";
+
 // Main Application Controller
 class ImageAnalysisApp {
     constructor() {
         this.canvas = null;
         this.ctx = null;
         this.image = null;
+        this.originalImage = null; // Store original for rotation
+        this.rotation = 0; // Current rotation in degrees
         this.scale = 1; // pixels per mm
         this.zoom = 1;
         this.panX = 0;
@@ -12,7 +17,8 @@ class ImageAnalysisApp {
         this.shapes = [];
         this.isCalibrating = false;
         this.calibrationPoints = [];
-        
+        this.version = APP_VERSION;
+
         this.init();
     }
 
@@ -20,7 +26,22 @@ class ImageAnalysisApp {
         this.setupCanvas();
         this.setupEventListeners();
         this.setupFileUpload();
-        console.log('Image Analysis App initialized');
+        this.initializeVersion();
+        console.log(`Image Analysis App v${this.version} initialized`);
+    }
+
+    initializeVersion() {
+        const versionElement = document.getElementById('versionNumber');
+        if (versionElement) {
+            versionElement.textContent = this.version;
+        }
+
+        // Add version to page title
+        document.title = `Image Pattern Analysis Tool v${this.version}`;
+
+        // Log version info
+        console.log(`%c🔧 Image Analysis Tool v${this.version}`, 'color: #4ec9b0; font-weight: bold;');
+        console.log(`%cFeatures: Numbered regions, clipboard support, detail view, independent scrolling`, 'color: #969696;');
     }
 
     setupCanvas() {
@@ -115,6 +136,36 @@ class ImageAnalysisApp {
             this.exportImage();
         });
 
+        // Detail View
+        document.getElementById('detailViewBtn').addEventListener('click', () => {
+            this.openDetailView();
+        });
+
+        document.getElementById('closeDetailView').addEventListener('click', () => {
+            this.closeDetailView();
+        });
+
+        // Close detail view when clicking outside
+        document.getElementById('detailViewModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailViewModal') {
+                this.closeDetailView();
+            }
+        });
+
+        // New button
+        document.getElementById('newBtn').addEventListener('click', () => {
+            this.newProject();
+        });
+
+        // Rotation controls
+        document.getElementById('rotateLeftBtn').addEventListener('click', () => {
+            this.rotateImage(-90);
+        });
+
+        document.getElementById('rotateRightBtn').addEventListener('click', () => {
+            this.rotateImage(90);
+        });
+
         // Canvas mouse events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
@@ -124,7 +175,7 @@ class ImageAnalysisApp {
 
     setupFileUpload() {
         const uploadArea = document.getElementById('uploadArea');
-        
+
         // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -138,7 +189,7 @@ class ImageAnalysisApp {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 this.handleFileSelect(files[0]);
@@ -149,6 +200,105 @@ class ImageAnalysisApp {
         uploadArea.addEventListener('click', () => {
             document.getElementById('fileInput').click();
         });
+
+        // Clipboard support (Ctrl+V to paste images)
+        this.setupClipboardSupport();
+    }
+
+    setupClipboardSupport() {
+        // Global paste event listener for Ctrl+V
+        document.addEventListener('paste', (e) => {
+            e.preventDefault();
+
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+
+                // Check if the item is an image
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    this.handleFileSelect(file);
+
+                    // Show feedback to user
+                    this.showClipboardFeedback('Image pasted successfully!');
+                    break;
+                }
+            }
+        });
+
+        // Global copy event listener for Ctrl+C (copy current image)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c' && this.image) {
+                // Only copy if we're not in an input field
+                if (!e.target.matches('input, textarea')) {
+                    e.preventDefault();
+                    this.copyImageToClipboard();
+                }
+            }
+        });
+
+        // Add visual feedback for clipboard operations
+        this.createClipboardFeedback();
+    }
+
+    createClipboardFeedback() {
+        // Create feedback element if it doesn't exist
+        if (!document.getElementById('clipboardFeedback')) {
+            const feedback = document.createElement('div');
+            feedback.id = 'clipboardFeedback';
+            feedback.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #4CAF50;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 4px;
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            document.body.appendChild(feedback);
+        }
+    }
+
+    showClipboardFeedback(message, isError = false) {
+        const feedback = document.getElementById('clipboardFeedback');
+        feedback.textContent = message;
+        feedback.style.background = isError ? '#f44336' : '#4CAF50';
+        feedback.style.opacity = '1';
+
+        setTimeout(() => {
+            feedback.style.opacity = '0';
+        }, 2000);
+    }
+
+    async copyImageToClipboard() {
+        try {
+            if (!this.canvas || !this.image) {
+                this.showClipboardFeedback('No image to copy', true);
+                return;
+            }
+
+            // Convert canvas to blob
+            this.canvas.toBlob(async (blob) => {
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    this.showClipboardFeedback('Image copied to clipboard!');
+                } catch (err) {
+                    console.error('Failed to copy image:', err);
+                    this.showClipboardFeedback('Failed to copy image', true);
+                }
+            }, 'image/png');
+        } catch (err) {
+            console.error('Failed to copy image:', err);
+            this.showClipboardFeedback('Failed to copy image', true);
+        }
     }
 
     handleFileSelect(file) {
@@ -167,12 +317,14 @@ class ImageAnalysisApp {
     loadImage(src) {
         const img = new Image();
         img.onload = () => {
+            this.originalImage = img; // Store original
             this.image = img;
+            this.rotation = 0; // Reset rotation
             this.resetZoom();
             this.drawImage();
             this.updateImageInfo();
             this.enableControls();
-            
+
             // Hide overlay
             document.getElementById('canvasOverlay').classList.add('hidden');
         };
@@ -180,14 +332,17 @@ class ImageAnalysisApp {
     }
 
     drawImage() {
-        if (!this.image) return;
+        if (!this.image || !this.canvas || !this.ctx) return;
+
+        // Store current canvas state to prevent interference
+        this.ctx.save();
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Calculate image position and size
         const imgAspect = this.image.width / this.image.height;
         const canvasAspect = this.canvas.width / this.canvas.height;
-        
+
         let drawWidth, drawHeight;
         if (imgAspect > canvasAspect) {
             drawWidth = this.canvas.width * this.zoom;
@@ -200,15 +355,22 @@ class ImageAnalysisApp {
         const x = (this.canvas.width - drawWidth) / 2 + this.panX;
         const y = (this.canvas.height - drawHeight) / 2 + this.panY;
 
-        this.ctx.drawImage(this.image, x, y, drawWidth, drawHeight);
-        
+        // Ensure we have valid drawing coordinates
+        if (isFinite(x) && isFinite(y) && isFinite(drawWidth) && isFinite(drawHeight) &&
+            drawWidth > 0 && drawHeight > 0) {
+            this.ctx.drawImage(this.image, x, y, drawWidth, drawHeight);
+        }
+
         // Draw shapes
         this.drawShapes();
-        
+
         // Draw calibration points if calibrating
         if (this.isCalibrating) {
             this.drawCalibrationPoints();
         }
+
+        // Restore canvas state
+        this.ctx.restore();
     }
 
     drawShapes() {
@@ -252,12 +414,13 @@ class ImageAnalysisApp {
 
     enableControls() {
         const buttons = [
-            'calibrateBtn', 'autoDetectBtn', 'rectangleToolBtn', 
+            'calibrateBtn', 'autoDetectBtn', 'rectangleToolBtn',
             'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
-            'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn',
+            'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
+            'rotateLeftBtn', 'rotateRightBtn',
             'calculateCostBtn', 'exportDataBtn', 'exportImageBtn'
         ];
-        
+
         buttons.forEach(id => {
             document.getElementById(id).disabled = false;
         });
@@ -388,6 +551,7 @@ class ImageAnalysisApp {
 
     autoDetectShapes() {
         if (window.ImageProcessor) {
+            this.clearShapeSelection();
             const detectedShapes = window.ImageProcessor.detectShapes(this.image, this.scale);
             this.shapes.push(...detectedShapes);
             this.drawImage();
@@ -396,6 +560,7 @@ class ImageAnalysisApp {
     }
 
     clearAllShapes() {
+        this.clearShapeSelection();
         this.shapes = [];
         this.drawImage();
         this.updateResults();
@@ -441,16 +606,220 @@ class ImageAnalysisApp {
         this.shapes.forEach((shape, index) => {
             const area = this.calculateShapeArea(shape);
             const shapeClass = shape.type.replace('-', '');
+            const shapeNumber = index + 1;
+
+            // Get color based on shape type for consistency with canvas
+            const colors = {
+                'rectangle': '#ff6b6b',
+                'circle': '#4ecdc4',
+                'polygon': '#45b7d1',
+                'detected-contour': '#f9ca24',
+                'detectedcontour': '#f9ca24'
+            };
+            const shapeColor = colors[shapeClass] || '#cccccc';
+
             html += `
-                <div class="result-item ${shapeClass}">
-                    <h4>${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)} ${index + 1}</h4>
-                    <p>Area: ${area.toFixed(2)} mm²</p>
-                    <p>Perimeter: ${this.calculateShapePerimeter(shape).toFixed(2)} mm</p>
+                <div class="result-item ${shapeClass}" data-shape-index="${index}">
+                    <div class="result-header">
+                        <span class="shape-number" style="background-color: ${shapeColor};">${shapeNumber}</span>
+                        <h4>${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}</h4>
+                    </div>
+                    <div class="result-details">
+                        <p><strong>Area:</strong> ${area.toFixed(2)} mm²</p>
+                        <p><strong>Perimeter:</strong> ${this.calculateShapePerimeter(shape).toFixed(2)} mm</p>
+                    </div>
                 </div>
             `;
         });
 
         resultsArea.innerHTML = html;
+
+        // Add hover effects to highlight shapes
+        this.setupResultHoverEffects();
+    }
+
+    setupResultHoverEffects() {
+        const resultItems = document.querySelectorAll('.result-item');
+
+        // Simple, clean event handling - let CSS handle the isolation
+        resultItems.forEach((item, index) => {
+            item.addEventListener('mouseenter', () => {
+                this.highlightShape(index, true);
+            });
+
+            item.addEventListener('mouseleave', () => {
+                this.highlightShape(index, false);
+            });
+
+            item.addEventListener('dblclick', () => {
+                this.focusOnShape(index);
+            });
+
+            item.addEventListener('click', () => {
+                this.selectShape(index);
+            });
+        });
+    }
+
+    selectShape(shapeIndex) {
+        // Clear previous selection
+        this.clearShapeSelection();
+
+        if (shapeIndex >= 0 && shapeIndex < this.shapes.length) {
+            const shape = this.shapes[shapeIndex];
+
+            // Mark as selected with a different style
+            shape._selected = true;
+            shape._originalLineWidth = shape.lineWidth || 2;
+            shape._originalStroke = shape.color;
+            shape.lineWidth = 3;
+            shape.color = '#00ff00'; // Green for selection
+
+            this.drawImage();
+
+            // Update result item visual state
+            document.querySelectorAll('.result-item').forEach((item, index) => {
+                if (index === shapeIndex) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+    }
+
+    clearShapeSelection() {
+        this.shapes.forEach(shape => {
+            if (shape._selected) {
+                shape.lineWidth = shape._originalLineWidth || 2;
+                shape.color = shape._originalStroke;
+                delete shape._selected;
+                delete shape._originalLineWidth;
+                delete shape._originalStroke;
+            }
+        });
+
+        // Clear visual selection from result items
+        document.querySelectorAll('.result-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+    }
+
+    highlightShape(shapeIndex, highlight) {
+        if (shapeIndex >= 0 && shapeIndex < this.shapes.length) {
+            const shape = this.shapes[shapeIndex];
+
+            // Don't highlight if already selected
+            if (shape._selected && highlight) return;
+
+            // Store original properties if highlighting
+            if (highlight) {
+                if (!shape._selected) {
+                    shape._originalLineWidth = shape.lineWidth || 2;
+                    shape._originalStroke = shape.color;
+                    shape.lineWidth = 4;
+                    shape.color = '#ffffff';
+                }
+            } else {
+                // Restore original properties only if not selected
+                if (!shape._selected) {
+                    shape.lineWidth = shape._originalLineWidth || 2;
+                    shape.color = shape._originalStroke;
+                    delete shape._originalLineWidth;
+                    delete shape._originalStroke;
+                }
+            }
+
+            this.drawImage();
+        }
+    }
+
+    focusOnShape(shapeIndex) {
+        if (shapeIndex >= 0 && shapeIndex < this.shapes.length) {
+            const shape = this.shapes[shapeIndex];
+
+            // Calculate shape bounds
+            let bounds = this.getShapeBounds(shape);
+
+            if (bounds) {
+                // Add padding
+                const padding = 50;
+                bounds.x -= padding;
+                bounds.y -= padding;
+                bounds.width += padding * 2;
+                bounds.height += padding * 2;
+
+                // Calculate zoom to fit shape
+                const canvasAspect = this.canvas.width / this.canvas.height;
+                const boundsAspect = bounds.width / bounds.height;
+
+                let newZoom;
+                if (boundsAspect > canvasAspect) {
+                    newZoom = this.canvas.width / bounds.width;
+                } else {
+                    newZoom = this.canvas.height / bounds.height;
+                }
+
+                // Limit zoom
+                newZoom = Math.max(0.1, Math.min(3, newZoom));
+
+                // Calculate pan to center shape
+                const shapeCenterX = bounds.x + bounds.width / 2;
+                const shapeCenterY = bounds.y + bounds.height / 2;
+
+                this.zoom = newZoom;
+                this.panX = this.canvas.width / 2 - shapeCenterX * newZoom;
+                this.panY = this.canvas.height / 2 - shapeCenterY * newZoom;
+
+                this.updateZoomDisplay();
+                this.drawImage();
+            }
+        }
+    }
+
+    getShapeBounds(shape) {
+        switch (shape.type) {
+            case 'rectangle':
+                return {
+                    x: shape.x,
+                    y: shape.y,
+                    width: shape.width,
+                    height: shape.height
+                };
+
+            case 'circle':
+                return {
+                    x: shape.centerX - shape.radius,
+                    y: shape.centerY - shape.radius,
+                    width: shape.radius * 2,
+                    height: shape.radius * 2
+                };
+
+            case 'polygon':
+            case 'detected-contour':
+                if (shape.points && shape.points.length > 0) {
+                    let minX = shape.points[0].x;
+                    let maxX = shape.points[0].x;
+                    let minY = shape.points[0].y;
+                    let maxY = shape.points[0].y;
+
+                    shape.points.forEach(point => {
+                        minX = Math.min(minX, point.x);
+                        maxX = Math.max(maxX, point.x);
+                        minY = Math.min(minY, point.y);
+                        maxY = Math.max(maxY, point.y);
+                    });
+
+                    return {
+                        x: minX,
+                        y: minY,
+                        width: maxX - minX,
+                        height: maxY - minY
+                    };
+                }
+                break;
+        }
+        return null;
     }
 
     calculateShapeArea(shape) {
@@ -491,6 +860,8 @@ class ImageAnalysisApp {
     // Export methods
     exportData() {
         const data = {
+            version: this.version,
+            timestamp: new Date().toISOString(),
             image: {
                 width: this.image.width,
                 height: this.image.height,
@@ -519,6 +890,152 @@ class ImageAnalysisApp {
         link.download = 'analyzed-image.png';
         link.href = this.canvas.toDataURL();
         link.click();
+    }
+
+    // Detail View Methods
+    openDetailView() {
+        if (!this.image) {
+            alert('Please load an image first');
+            return;
+        }
+
+        const modal = document.getElementById('detailViewModal');
+        const originalCanvas = document.getElementById('originalDetailCanvas');
+        const analyzedCanvas = document.getElementById('analyzedDetailCanvas');
+
+        // Set up canvases at 1:1 scale
+        const imageWidth = this.image.width;
+        const imageHeight = this.image.height;
+
+        // Original image canvas
+        originalCanvas.width = imageWidth;
+        originalCanvas.height = imageHeight;
+        const originalCtx = originalCanvas.getContext('2d');
+        originalCtx.drawImage(this.image, 0, 0);
+
+        // Analyzed image canvas
+        analyzedCanvas.width = imageWidth;
+        analyzedCanvas.height = imageHeight;
+        const analyzedCtx = analyzedCanvas.getContext('2d');
+
+        // Draw image
+        analyzedCtx.drawImage(this.image, 0, 0);
+
+        // Draw shapes at 1:1 scale
+        if (window.CanvasTools && this.shapes.length > 0) {
+            window.CanvasTools.drawShapes(analyzedCtx, this.shapes);
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+
+        // Add escape key listener
+        this.detailViewKeyHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.closeDetailView();
+            }
+        };
+        document.addEventListener('keydown', this.detailViewKeyHandler);
+    }
+
+    closeDetailView() {
+        const modal = document.getElementById('detailViewModal');
+        modal.style.display = 'none';
+
+        // Remove escape key listener
+        if (this.detailViewKeyHandler) {
+            document.removeEventListener('keydown', this.detailViewKeyHandler);
+            this.detailViewKeyHandler = null;
+        }
+    }
+
+    // New Project Method
+    newProject() {
+        if (confirm('Start a new project? This will clear all current work.')) {
+            // Reset all properties
+            this.image = null;
+            this.originalImage = null;
+            this.rotation = 0;
+            this.scale = 1;
+            this.zoom = 1;
+            this.panX = 0;
+            this.panY = 0;
+            this.currentTool = null;
+            this.shapes = [];
+            this.isCalibrating = false;
+            this.calibrationPoints = [];
+
+            // Clear canvas
+            if (this.ctx) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            // Reset UI
+            this.updateResults();
+            this.updateImageInfo();
+            this.updateZoomLevel();
+
+            // Show overlay
+            document.getElementById('canvasOverlay').classList.remove('hidden');
+
+            // Disable controls
+            const buttons = [
+                'calibrateBtn', 'autoDetectBtn', 'rectangleToolBtn',
+                'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
+                'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
+                'rotateLeftBtn', 'rotateRightBtn',
+                'calculateCostBtn', 'exportDataBtn', 'exportImageBtn'
+            ];
+
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = true;
+            });
+
+            console.log('New project started');
+        }
+    }
+
+    // Image Rotation Method
+    rotateImage(degrees) {
+        if (!this.originalImage) return;
+
+        this.rotation = (this.rotation + degrees) % 360;
+        if (this.rotation < 0) this.rotation += 360;
+
+        // Create rotated image
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Calculate new dimensions for rotated image
+        const angle = (this.rotation * Math.PI) / 180;
+        const cos = Math.abs(Math.cos(angle));
+        const sin = Math.abs(Math.sin(angle));
+
+        const newWidth = this.originalImage.width * cos + this.originalImage.height * sin;
+        const newHeight = this.originalImage.width * sin + this.originalImage.height * cos;
+
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+
+        // Draw rotated image
+        ctx.translate(newWidth / 2, newHeight / 2);
+        ctx.rotate(angle);
+        ctx.drawImage(
+            this.originalImage,
+            -this.originalImage.width / 2,
+            -this.originalImage.height / 2
+        );
+
+        // Create new image from rotated canvas
+        const rotatedImg = new Image();
+        rotatedImg.onload = () => {
+            this.image = rotatedImg;
+            this.drawImage();
+            this.updateImageInfo();
+        };
+        rotatedImg.src = canvas.toDataURL();
+
+        console.log(`Image rotated to ${this.rotation}°`);
     }
 }
 

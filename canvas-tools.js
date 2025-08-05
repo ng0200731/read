@@ -7,12 +7,12 @@ window.CanvasTools = {
 
     // Main drawing function for all shapes
     drawShapes(ctx, shapes) {
-        shapes.forEach(shape => {
-            this.drawShape(ctx, shape);
+        shapes.forEach((shape, index) => {
+            this.drawShape(ctx, shape, index + 1);
         });
     },
 
-    drawShape(ctx, shape) {
+    drawShape(ctx, shape, shapeNumber = null) {
         ctx.save();
 
         // Set vibrant colors based on shape type
@@ -42,6 +42,11 @@ window.CanvasTools = {
             case 'detected-contour':
                 this.drawContour(ctx, shape);
                 break;
+        }
+
+        // Draw number label if provided
+        if (shapeNumber !== null) {
+            this.drawShapeNumber(ctx, shape, shapeNumber, shapeColors.stroke);
         }
 
         ctx.restore();
@@ -124,6 +129,61 @@ window.CanvasTools = {
             ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
             ctx.fill();
         });
+    },
+
+    drawShapeNumber(ctx, shape, number, strokeColor) {
+        // Calculate the position for the number label
+        let labelX, labelY;
+
+        switch (shape.type) {
+            case 'rectangle':
+                // Position at top-left corner with offset
+                labelX = shape.x - 25;
+                labelY = shape.y - 5;
+                break;
+            case 'circle':
+                // Position at top of circle
+                labelX = shape.centerX - 15;
+                labelY = shape.centerY - shape.radius - 15;
+                break;
+            case 'polygon':
+            case 'detected-contour':
+                // Position at the topmost point
+                if (shape.points && shape.points.length > 0) {
+                    const topPoint = shape.points.reduce((top, point) =>
+                        point.y < top.y ? point : top, shape.points[0]);
+                    labelX = topPoint.x - 15;
+                    labelY = topPoint.y - 15;
+                } else {
+                    labelX = 0;
+                    labelY = 0;
+                }
+                break;
+            default:
+                labelX = 0;
+                labelY = 0;
+        }
+
+        // Draw number background circle
+        ctx.save();
+        ctx.fillStyle = strokeColor;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+
+        const radius = 12;
+        ctx.beginPath();
+        ctx.arc(labelX, labelY, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw number text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(number.toString(), labelX, labelY);
+
+        ctx.restore();
     },
 
     // Mouse event handlers

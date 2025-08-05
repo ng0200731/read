@@ -10,8 +10,16 @@
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1>Image Pattern Analysis Tool</h1>
-            <p>Upload images, detect patterns, calculate areas and costs</p>
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>Image Pattern Analysis Tool</h1>
+                    <p>Upload images, detect patterns, calculate areas and costs</p>
+                </div>
+                <div class="version-info">
+                    <span class="version-label">Version</span>
+                    <span class="version-number" id="versionNumber">1.2.3</span>
+                </div>
+            </div>
         </header>
 
         <!-- Main Content -->
@@ -24,9 +32,16 @@
                         <div class="upload-content">
                             <div class="upload-icon">📁</div>
                             <p>Drag & drop image here</p>
+                            <p>or <strong>Ctrl+V</strong> to paste</p>
                             <p>or</p>
-                            <button class="btn-primary" id="selectFileBtn">Select File</button>
+                            <div class="upload-buttons">
+                                <button class="btn-primary" id="selectFileBtn">Select File</button>
+                                <button class="btn-secondary" id="newBtn">New</button>
+                            </div>
                             <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                            <div class="clipboard-hint">
+                                <small>💡 Tip: Use <strong>Ctrl+C</strong> to copy the current image</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -56,12 +71,6 @@
                     </div>
                 </div>
 
-                <div class="panel-section">
-                    <h3>4. Results</h3>
-                    <div class="results-area" id="resultsArea">
-                        <p class="no-results">No measurements yet</p>
-                    </div>
-                </div>
             </div>
 
             <!-- Center Panel - Canvas -->
@@ -75,26 +84,38 @@
                     </div>
                 </div>
                 <div class="canvas-controls">
-                    <button class="btn-secondary" id="zoomInBtn" disabled>Zoom In</button>
-                    <button class="btn-secondary" id="zoomOutBtn" disabled>Zoom Out</button>
-                    <button class="btn-secondary" id="resetZoomBtn" disabled>Reset Zoom</button>
-                    <span class="zoom-level" id="zoomLevel">100%</span>
+                    <div class="control-group">
+                        <button class="btn-secondary" id="zoomInBtn" disabled>Zoom In</button>
+                        <button class="btn-secondary" id="zoomOutBtn" disabled>Zoom Out</button>
+                        <button class="btn-secondary" id="resetZoomBtn" disabled>Reset Zoom</button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                    </div>
+                    <div class="control-group">
+                        <button class="btn-icon" id="rotateLeftBtn" disabled title="Rotate 90° Counter-clockwise">↺</button>
+                        <button class="btn-icon" id="rotateRightBtn" disabled title="Rotate 90° Clockwise">↻</button>
+                    </div>
+                    <div class="control-group">
+                        <button class="btn-secondary" id="detailViewBtn" disabled>Detail View</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right Panel - Properties -->
+            <!-- Right Panel - Results and Properties -->
             <div class="properties-panel">
-                <div class="panel-section">
-                    <h3>Image Info</h3>
-                    <div class="image-info" id="imageInfo">
-                        <p>No image loaded</p>
+                <div class="panel-section results-section">
+                    <h3>Results</h3>
+                    <div class="results-header">
+                        <small>Click to select • Double-click to focus</small>
+                    </div>
+                    <div class="results-area" id="resultsArea">
+                        <p class="no-results">No measurements yet</p>
                     </div>
                 </div>
 
                 <div class="panel-section">
-                    <h3>Selected Shape</h3>
-                    <div class="shape-properties" id="shapeProperties">
-                        <p>No shape selected</p>
+                    <h3>Image Info</h3>
+                    <div class="image-info" id="imageInfo">
+                        <p>No image loaded</p>
                     </div>
                 </div>
 
@@ -113,6 +134,28 @@
                     <div class="export-controls">
                         <button class="btn-secondary" id="exportDataBtn" disabled>Export Data</button>
                         <button class="btn-secondary" id="exportImageBtn" disabled>Export Image</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail View Modal -->
+    <div class="detail-view-modal" id="detailViewModal" style="display: none;">
+        <div class="detail-view-content">
+            <div class="detail-view-header">
+                <h3>Detail View - 1:1 Scale</h3>
+                <button class="close-detail-view" id="closeDetailView">×</button>
+            </div>
+            <div class="detail-view-body">
+                <div class="detail-view-images">
+                    <div class="detail-image-container">
+                        <h4>Original Image</h4>
+                        <canvas id="originalDetailCanvas"></canvas>
+                    </div>
+                    <div class="detail-image-container">
+                        <h4>Analyzed Image</h4>
+                        <canvas id="analyzedDetailCanvas"></canvas>
                     </div>
                 </div>
             </div>
