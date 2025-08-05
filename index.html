@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Pattern Analysis Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>Image Pattern Analysis Tool</h1>
+            <p>Upload images, detect patterns, calculate areas and costs</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel - Tools -->
+            <div class="tools-panel">
+                <div class="panel-section">
+                    <h3>1. Upload Image</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <p>Drag & drop image here</p>
+                            <p>or</p>
+                            <button class="btn-primary" id="selectFileBtn">Select File</button>
+                            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>2. Scale Calibration</h3>
+                    <div class="calibration-controls">
+                        <button class="btn-secondary" id="calibrateBtn" disabled>Set Scale</button>
+                        <div class="calibration-input" id="calibrationInput" style="display: none;">
+                            <label>Real measurement (mm):</label>
+                            <input type="number" id="realMeasurement" placeholder="Enter mm">
+                            <button class="btn-primary" id="confirmCalibration">Confirm</button>
+                            <button class="btn-secondary" id="cancelCalibration">Cancel</button>
+                        </div>
+                        <div class="scale-info" id="scaleInfo"></div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>3. Detection Tools</h3>
+                    <div class="tool-buttons">
+                        <button class="btn-tool" id="autoDetectBtn" disabled>Auto Detect Shapes</button>
+                        <button class="btn-tool" id="rectangleToolBtn" disabled>Rectangle Tool</button>
+                        <button class="btn-tool" id="circleToolBtn" disabled>Circle Tool</button>
+                        <button class="btn-tool" id="polygonToolBtn" disabled>Polygon Tool</button>
+                        <button class="btn-tool" id="clearAllBtn" disabled>Clear All</button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>4. Results</h3>
+                    <div class="results-area" id="resultsArea">
+                        <p class="no-results">No measurements yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Canvas -->
+            <div class="canvas-panel">
+                <div class="canvas-container">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="canvas-overlay" id="canvasOverlay">
+                        <div class="canvas-instructions" id="canvasInstructions">
+                            Upload an image to get started
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-controls">
+                    <button class="btn-secondary" id="zoomInBtn" disabled>Zoom In</button>
+                    <button class="btn-secondary" id="zoomOutBtn" disabled>Zoom Out</button>
+                    <button class="btn-secondary" id="resetZoomBtn" disabled>Reset Zoom</button>
+                    <span class="zoom-level" id="zoomLevel">100%</span>
+                </div>
+            </div>
+
+            <!-- Right Panel - Properties -->
+            <div class="properties-panel">
+                <div class="panel-section">
+                    <h3>Image Info</h3>
+                    <div class="image-info" id="imageInfo">
+                        <p>No image loaded</p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Selected Shape</h3>
+                    <div class="shape-properties" id="shapeProperties">
+                        <p>No shape selected</p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Cost Calculation</h3>
+                    <div class="cost-controls">
+                        <label>Cost per sq mm:</label>
+                        <input type="number" id="costPerSqMm" placeholder="0.00" step="0.001">
+                        <button class="btn-primary" id="calculateCostBtn" disabled>Calculate Total Cost</button>
+                        <div class="total-cost" id="totalCost"></div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Export</h3>
+                    <div class="export-controls">
+                        <button class="btn-secondary" id="exportDataBtn" disabled>Export Data</button>
+                        <button class="btn-secondary" id="exportImageBtn" disabled>Export Image</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    <script src="canvas-tools.js"></script>
+    <script src="image-processor.js"></script>
+    <script src="calculator.js"></script>
+</body>
+</html>

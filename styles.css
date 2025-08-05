@@ -1,0 +1,368 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    line-height: 1.4;
+    font-size: 13px;
+}
+
+/* App Container */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.app-header {
+    background: #2d2d30;
+    color: #cccccc;
+    padding: 8px 16px;
+    border-bottom: 1px solid #3e3e42;
+}
+
+.app-header h1 {
+    font-size: 14px;
+    font-weight: 400;
+    margin-bottom: 2px;
+}
+
+.app-header p {
+    font-size: 11px;
+    color: #969696;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    gap: 0;
+    max-height: calc(100vh - 60px);
+}
+
+/* Panel Styles */
+.tools-panel, .properties-panel {
+    background: #252526;
+    border-right: 1px solid #3e3e42;
+    overflow-y: auto;
+}
+
+.properties-panel {
+    border-right: none;
+    border-left: 1px solid #3e3e42;
+}
+
+.panel-section {
+    padding: 12px;
+    border-bottom: 1px solid #3e3e42;
+}
+
+.panel-section:last-child {
+    border-bottom: none;
+}
+
+.panel-section h3 {
+    color: #cccccc;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Upload Area */
+.upload-area {
+    border: 1px solid #3e3e42;
+    background: #1e1e1e;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.upload-area:hover {
+    border-color: #007acc;
+}
+
+.upload-area.dragover {
+    border-color: #007acc;
+    background: #1a1a1a;
+}
+
+.upload-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: #969696;
+}
+
+.upload-content p {
+    margin: 4px 0;
+    color: #969696;
+    font-size: 11px;
+}
+
+/* Buttons */
+.btn-primary, .btn-secondary, .btn-tool {
+    padding: 6px 12px;
+    border: 1px solid #3e3e42;
+    background: #2d2d30;
+    color: #cccccc;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    transition: all 0.1s;
+    margin: 2px 0;
+}
+
+.btn-primary {
+    background: #007acc;
+    border-color: #007acc;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #005a9e;
+}
+
+.btn-secondary {
+    background: #2d2d30;
+    color: #cccccc;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #3e3e42;
+}
+
+.btn-tool {
+    background: #2d2d30;
+    color: #cccccc;
+    width: 100%;
+    text-align: left;
+    margin: 1px 0;
+}
+
+.btn-tool:hover:not(:disabled) {
+    background: #3e3e42;
+}
+
+.btn-tool.active {
+    background: #007acc;
+    color: white;
+    border-color: #007acc;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Canvas Panel */
+.canvas-panel {
+    background: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #1e1e1e;
+}
+
+#mainCanvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    cursor: crosshair;
+}
+
+.canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30, 30, 30, 0.9);
+    pointer-events: none;
+}
+
+.canvas-overlay.hidden {
+    display: none;
+}
+
+.canvas-instructions {
+    text-align: center;
+    color: #969696;
+    font-size: 11px;
+}
+
+.canvas-controls {
+    padding: 8px 12px;
+    background: #2d2d30;
+    border-top: 1px solid #3e3e42;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zoom-level {
+    margin-left: auto;
+    font-size: 11px;
+    color: #cccccc;
+}
+
+/* Form Controls */
+input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #3e3e42;
+    background: #1e1e1e;
+    color: #cccccc;
+    font-size: 11px;
+    font-family: inherit;
+    margin: 4px 0;
+}
+
+input[type="number"]:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: #007acc;
+}
+
+/* Calibration Controls */
+.calibration-input {
+    background: #2d2d30;
+    padding: 12px;
+    border: 1px solid #3e3e42;
+    margin-top: 8px;
+}
+
+.scale-info {
+    margin-top: 8px;
+    padding: 8px;
+    background: #0e4f1f;
+    border: 1px solid #14892c;
+    font-size: 11px;
+    color: #4ec9b0;
+}
+
+/* Results Area */
+.results-area {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.no-results {
+    color: #969696;
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+}
+
+.result-item {
+    background: #2d2d30;
+    padding: 12px;
+    margin: 4px 0;
+    border-left: 2px solid #4ec9b0;
+}
+
+.result-item h4 {
+    color: #4ec9b0;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.result-item p {
+    margin: 2px 0;
+    font-size: 11px;
+    color: #cccccc;
+}
+
+/* Cost Display */
+.total-cost {
+    margin-top: 8px;
+    padding: 12px;
+    background: #0e4f1f;
+    border: 1px solid #14892c;
+    font-size: 11px;
+    color: #4ec9b0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .main-content {
+        grid-template-columns: 240px 1fr 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+    }
+
+    .tools-panel, .properties-panel {
+        max-height: 300px;
+    }
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: #969696;
+}
+
+/* Vibrant Result Colors */
+.result-item.rectangle {
+    border-left-color: #ff6b6b;
+}
+
+.result-item.circle {
+    border-left-color: #4ecdc4;
+}
+
+.result-item.polygon {
+    border-left-color: #45b7d1;
+}
+
+.result-item.detected-contour {
+    border-left-color: #f9ca24;
+}
+
+/* Shape-specific result headers */
+.result-item.rectangle h4 {
+    color: #ff6b6b;
+}
+
+.result-item.circle h4 {
+    color: #4ecdc4;
+}
+
+.result-item.polygon h4 {
+    color: #45b7d1;
+}
+
+.result-item.detected-contour h4 {
+    color: #f9ca24;
+}
