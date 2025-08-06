@@ -20,61 +20,14 @@
                 </div>
                 <div class="version-info">
                     <span class="version-label">Version</span>
-                    <span class="version-number" id="versionNumber">1.4.3</span>
+                    <span class="version-number" id="versionNumber">1.5.1</span>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Left Panel - Tools -->
-            <div class="tools-panel">
-                <div class="panel-section">
-                    <h3>1. Upload Image</h3>
-                    <div class="upload-area" id="uploadArea">
-                        <div class="upload-content">
-                            <div class="upload-icon">📁</div>
-                            <p>Drag & drop image here</p>
-                            <p>or <strong>Ctrl+V</strong> to paste</p>
-                            <p>or</p>
-                            <div class="upload-buttons">
-                                <button class="btn-primary" id="selectFileBtn">Select File</button>
-                                <button class="btn-secondary" id="newBtn">New</button>
-                            </div>
-                            <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                            <div class="clipboard-hint">
-                                <small>💡 Tip: Use <strong>Ctrl+C</strong> to copy the current image</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="panel-section">
-                    <h3>2. Scale Calibration</h3>
-                    <div class="calibration-controls">
-                        <button class="btn-secondary" id="calibrateBtn" disabled>Set Scale</button>
-                        <div class="calibration-input" id="calibrationInput" style="display: none;">
-                            <label>Real measurement (mm):</label>
-                            <input type="number" id="realMeasurement" placeholder="Enter mm">
-                            <button class="btn-primary" id="confirmCalibration">Confirm</button>
-                            <button class="btn-secondary" id="cancelCalibration">Cancel</button>
-                        </div>
-                        <div class="scale-info" id="scaleInfo"></div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3>3. Detection Tools</h3>
-                    <div class="tool-buttons">
-                        <button class="btn-tool" id="autoDetectBtn" disabled>Auto Detect Shapes</button>
-                        <button class="btn-tool" id="rectangleToolBtn" disabled>Rectangle Tool</button>
-                        <button class="btn-tool" id="circleToolBtn" disabled>Circle Tool</button>
-                        <button class="btn-tool" id="polygonToolBtn" disabled>Polygon Tool</button>
-                        <button class="btn-tool" id="clearAllBtn" disabled>Clear All</button>
-                    </div>
-                </div>
-
-            </div>
 
             <!-- Center Panel - Split Canvas -->
             <div class="canvas-panel">
@@ -139,6 +92,31 @@
 
             <!-- Right Panel - Results and Properties -->
             <div class="properties-panel">
+                <div class="panel-section">
+                    <h3>Scale Calibration</h3>
+                    <div class="calibration-controls">
+                        <button class="btn-secondary" id="calibrateBtn" disabled>Set Scale</button>
+                        <div class="calibration-input" id="calibrationInput" style="display: none;">
+                            <label>Real measurement (mm):</label>
+                            <input type="number" id="realMeasurement" placeholder="Enter mm">
+                            <button class="btn-primary" id="confirmCalibration">Confirm</button>
+                            <button class="btn-secondary" id="cancelCalibration">Cancel</button>
+                        </div>
+                        <div class="scale-info" id="scaleInfo"></div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Detection Tools</h3>
+                    <div class="tool-buttons">
+                        <button class="btn-tool" id="autoDetectBtn" disabled>Auto Detect Shapes</button>
+                        <button class="btn-tool" id="rectangleToolBtn" disabled>Rectangle Tool</button>
+                        <button class="btn-tool" id="circleToolBtn" disabled>Circle Tool</button>
+                        <button class="btn-tool" id="polygonToolBtn" disabled>Polygon Tool</button>
+                        <button class="btn-tool" id="clearAllBtn" disabled>Clear All</button>
+                    </div>
+                </div>
+
                 <div class="panel-section results-section">
                     <h3>Results</h3>
                     <div class="results-header">

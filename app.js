@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.4.3";
+const APP_VERSION = "1.5.1";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -33,7 +33,6 @@ class ImageAnalysisApp {
     init() {
         this.setupCanvas();
         this.setupEventListeners();
-        this.setupFileUpload();
         this.setupCanvasUpload();
         this.initializeVersion();
         console.log(`Image Analysis App v${this.version} initialized`);
@@ -88,14 +87,7 @@ class ImageAnalysisApp {
     }
 
     setupEventListeners() {
-        // File upload
-        document.getElementById('selectFileBtn').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
 
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            this.handleFileSelect(e.target.files[0]);
-        });
 
         // Calibration
         document.getElementById('calibrateBtn').addEventListener('click', () => {
@@ -174,10 +166,7 @@ class ImageAnalysisApp {
             }
         });
 
-        // New button
-        document.getElementById('newBtn').addEventListener('click', () => {
-            this.newProject();
-        });
+
 
         // Rotation controls
         document.getElementById('rotateLeftBtn').addEventListener('click', () => {
@@ -203,57 +192,7 @@ class ImageAnalysisApp {
         this.rightCanvas.addEventListener('contextmenu', (e) => e.preventDefault()); // Disable right-click menu
     }
 
-    setupFileUpload() {
-        const uploadArea = document.getElementById('uploadArea');
-        console.log('🎯 Setting up file upload for:', uploadArea);
 
-        // Enhanced drag and drop with better visual feedback
-        uploadArea.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.add('dragover');
-            console.log('📥 Drag enter on upload area');
-        });
-
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Only remove dragover if we're actually leaving the upload area
-            if (!uploadArea.contains(e.relatedTarget)) {
-                uploadArea.classList.remove('dragover');
-                console.log('📤 Drag leave from upload area');
-            }
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadArea.classList.remove('dragover');
-            console.log('🎯 Drop on upload area');
-
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                console.log('📁 Processing dropped file:', files[0].name);
-                this.handleFileSelect(files[0]);
-            } else {
-                console.log('❌ No files in drop event');
-            }
-        });
-
-        // Click to upload
-        uploadArea.addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
-
-        // Clipboard support (Ctrl+V to paste images)
-        this.setupClipboardSupport();
-    }
 
     setupCanvasUpload() {
         const canvasOverlay = document.getElementById('leftCanvasOverlay');
@@ -304,10 +243,25 @@ class ImageAnalysisApp {
             }
         });
 
+        // Create hidden file input for canvas upload
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/jpeg,image/jpg,image/gif';
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleFileSelect(e.target.files[0]);
+            }
+        });
+        document.body.appendChild(fileInput);
+
         // Click to upload on canvas
         canvasOverlay.addEventListener('click', () => {
-            document.getElementById('fileInput').click();
+            fileInput.click();
         });
+
+        // Setup clipboard support
+        this.setupClipboardSupport();
 
         console.log('✅ Canvas upload setup complete');
     }

@@ -90,7 +90,7 @@ body {
 .main-content {
     flex: 1;
     display: grid;
-    grid-template-columns: 280px 1fr 480px; /* Increased from 320px to 480px (+50%) */
+    grid-template-columns: 1fr 480px; /* Removed left panel, expanded canvas area */
     gap: 0;
     height: calc(100vh - 60px); /* Fixed height instead of max-height */
     overflow: hidden; /* Prevent main content from scrolling */
@@ -654,7 +654,7 @@ input[type="number"]:focus, input[type="text"]:focus {
 /* Responsive Design */
 @media (max-width: 1200px) {
     .main-content {
-        grid-template-columns: 240px 1fr 420px; /* Increased from 280px to 420px (+50%) */
+        grid-template-columns: 1fr 420px; /* Removed left panel, kept expanded right panel */
     }
 
     .detail-view-images {
@@ -666,11 +666,11 @@ input[type="number"]:focus, input[type="text"]:focus {
 @media (max-width: 768px) {
     .main-content {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
+        grid-template-rows: auto auto;
     }
 
-    .tools-panel, .properties-panel {
-        max-height: 300px;
+    .properties-panel {
+        max-height: 400px;
     }
 }
 
