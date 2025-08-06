@@ -20,9 +20,10 @@ window.CanvasTools = {
     },
 
     // Draw shapes without any coordinate transforms (shapes already in canvas coordinates)
-    drawShapesWithoutDimensionsRaw(ctx, shapes) {
+    drawShapesWithoutDimensionsRaw(ctx, shapes, editingIndex = -1) {
         shapes.forEach((shape, index) => {
-            this.drawShapeRaw(ctx, shape, index + 1);
+            const isEditing = index === editingIndex;
+            this.drawShapeRaw(ctx, shape, index + 1, isEditing);
         });
     },
 
@@ -792,11 +793,11 @@ window.CanvasTools = {
     },
 
     // Draw shape without any coordinate transforms (shape already in canvas coordinates)
-    drawShapeRaw(ctx, shape, shapeNumber) {
+    drawShapeRaw(ctx, shape, shapeNumber, isEditing = false) {
         ctx.save();
 
-        // Set basic style
-        ctx.strokeStyle = shape.color || '#00ff00';
+        // Set basic style - use black if editing
+        ctx.strokeStyle = isEditing ? '#000000' : (shape.color || '#00ff00');
         ctx.lineWidth = shape.lineWidth || 2;
         ctx.fillStyle = 'transparent';
 

@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.9.3";
+const APP_VERSION = "2.0.0";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -26,6 +26,13 @@ class ImageAnalysisApp {
         this.isCalibrating = false;
         this.calibrationPoints = [];
         this.version = APP_VERSION;
+
+        // Shape editing state
+        this.isEditingShape = false;
+        this.editingShapeIndex = -1;
+        this.originalShape = null;
+        this.editingHandles = [];
+        this.dragHandle = null;
 
         this.init();
     }
@@ -199,6 +206,17 @@ class ImageAnalysisApp {
 
         // Setup resizable divider
         this.setupResizableDivider();
+
+        // ESC key to cancel editing, Enter key to finish editing
+        document.addEventListener('keydown', (e) => {
+            if (this.isEditingShape) {
+                if (e.key === 'Escape') {
+                    this.cancelShapeEditing();
+                } else if (e.key === 'Enter') {
+                    this.finishShapeEditing();
+                }
+            }
+        });
     }
 
     // Setup resizable divider between canvas panels
@@ -654,6 +672,11 @@ class ImageAnalysisApp {
             this.drawCalibrationPointsLeft();
         }
 
+        // Draw editing handles INSIDE rotation transform (in rotated coordinate space)
+        if (this.isEditingShape) {
+            this.drawEditingHandles();
+        }
+
         // Restore rotation transform
         this.leftCtx.restore();
 
@@ -770,7 +793,9 @@ class ImageAnalysisApp {
         });
 
         // Draw converted shapes (they're now in rotated canvas space, so no additional transforms needed)
-        window.CanvasTools.drawShapesWithoutDimensionsRaw(this.leftCtx, convertedShapes);
+        // Use black color for shape being edited
+        const editingIndex = this.isEditingShape ? this.editingShapeIndex : -1;
+        window.CanvasTools.drawShapesWithoutDimensionsRaw(this.leftCtx, convertedShapes, editingIndex);
     }
 
     // Convert image coordinates to canvas coordinates in rotated space (relative to rotated image center)
@@ -1010,7 +1035,10 @@ class ImageAnalysisApp {
         }
 
         // Left mouse button (button === 0)
-        if (this.isCalibrating) {
+        if (this.isEditingShape) {
+            // Check if clicking on editing handle
+            this.handleEditingMouseDown(x, y);
+        } else if (this.isCalibrating) {
             this.addCalibrationPoint(x, y);
         } else if (this.currentTool) {
             // Tool-specific mouse handling will be in canvas-tools.js
@@ -1036,6 +1064,14 @@ class ImageAnalysisApp {
             return;
         }
 
+        if (this.isEditingShape && this.dragHandle) {
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.handleEditingMouseMove(x, y);
+            return;
+        }
+
         const rect = e.target.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -1048,6 +1084,11 @@ class ImageAnalysisApp {
     handleMouseUp(e) {
         if (e.button === 2) { // Right mouse button
             this.isPanning = false;
+            return;
+        }
+
+        if (this.isEditingShape && this.dragHandle) {
+            this.handleEditingMouseUp();
             return;
         }
 
@@ -1281,7 +1322,7 @@ class ImageAnalysisApp {
                 '0';
 
             html += `
-                <div class="result-item ${shapeClass}" data-shape-index="${index}">
+                <div class="result-item ${shapeClass}" data-shape-index="${index}" ondblclick="window.app.startEditingShape(${index})" title="Double-click to edit">
                     <div class="result-header">
                         <span class="shape-number" style="background-color: ${shapeColor};">${shapeNumber}</span>
                         <h4>${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}</h4>
@@ -1826,7 +1867,7 @@ class ImageAnalysisApp {
         const relativeY = scaledY - imageInfo.height / 2;
 
         // Apply rotation
-        const angle = (this.rotation * Math.PI) / 180;
+        const angle = (this.imageRotation * Math.PI) / 180;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
 
@@ -1867,6 +1908,338 @@ class ImageAnalysisApp {
 
             console.log(`Deleted ${shapeType} #${shapeNumber}`);
         }
+    }
+
+    // Shape Editing Methods
+    startEditingShape(shapeIndex) {
+        if (shapeIndex < 0 || shapeIndex >= this.shapes.length) return;
+        if (this.shapes[shapeIndex].type !== 'rectangle') {
+            console.log('⚠️ Only rectangles can be edited currently');
+            return;
+        }
+
+        console.log(`✏️ Starting to edit rectangle #${shapeIndex + 1}`);
+
+        this.isEditingShape = true;
+        this.editingShapeIndex = shapeIndex;
+        this.originalShape = JSON.parse(JSON.stringify(this.shapes[shapeIndex])); // Deep copy
+
+        // Generate editing handles
+        this.generateEditingHandles();
+
+        // Redraw with editing handles
+        this.drawBothCanvases();
+    }
+
+    generateEditingHandles() {
+        const shape = this.shapes[this.editingShapeIndex];
+        if (!shape || shape.type !== 'rectangle') return;
+
+        // Get image info for coordinate conversion
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return;
+
+        // Convert shape corners from image coordinates to rotated canvas coordinates (same as shapes)
+        const topLeft = this.imageToCanvasCoordsInRotatedSpace(shape.x, shape.y, imageInfo);
+        const topRight = this.imageToCanvasCoordsInRotatedSpace(shape.x + shape.width, shape.y, imageInfo);
+        const bottomLeft = this.imageToCanvasCoordsInRotatedSpace(shape.x, shape.y + shape.height, imageInfo);
+        const bottomRight = this.imageToCanvasCoordsInRotatedSpace(shape.x + shape.width, shape.y + shape.height, imageInfo);
+
+        // Calculate edge midpoints
+        const topMid = {
+            x: (topLeft.x + topRight.x) / 2,
+            y: (topLeft.y + topRight.y) / 2
+        };
+        const bottomMid = {
+            x: (bottomLeft.x + bottomRight.x) / 2,
+            y: (bottomLeft.y + bottomRight.y) / 2
+        };
+        const leftMid = {
+            x: (topLeft.x + bottomLeft.x) / 2,
+            y: (topLeft.y + bottomLeft.y) / 2
+        };
+        const rightMid = {
+            x: (topRight.x + bottomRight.x) / 2,
+            y: (topRight.y + bottomRight.y) / 2
+        };
+
+        this.editingHandles = [
+            // Corner handles
+            { type: 'corner', position: 'top-left', x: topLeft.x, y: topLeft.y },
+            { type: 'corner', position: 'top-right', x: topRight.x, y: topRight.y },
+            { type: 'corner', position: 'bottom-left', x: bottomLeft.x, y: bottomLeft.y },
+            { type: 'corner', position: 'bottom-right', x: bottomRight.x, y: bottomRight.y },
+
+            // Edge handles
+            { type: 'edge', position: 'top', x: topMid.x, y: topMid.y },
+            { type: 'edge', position: 'bottom', x: bottomMid.x, y: bottomMid.y },
+            { type: 'edge', position: 'left', x: leftMid.x, y: leftMid.y },
+            { type: 'edge', position: 'right', x: rightMid.x, y: rightMid.y }
+        ];
+
+        console.log('🎯 Generated editing handles with rotation:', this.editingHandles.length, 'rotation:', this.imageRotation + '°');
+        console.log('Handle positions:', this.editingHandles.map(h => `${h.position}: (${h.x.toFixed(1)}, ${h.y.toFixed(1)})`));
+    }
+
+    cancelShapeEditing() {
+        if (!this.isEditingShape) return;
+
+        console.log('❌ Cancelled shape editing');
+
+        // Show cancellation message
+        this.showConfirmationMessage('❌ Changes cancelled - reverted to original size');
+
+        // Restore original shape
+        this.shapes[this.editingShapeIndex] = this.originalShape;
+
+        // Reset editing state
+        this.isEditingShape = false;
+        this.editingShapeIndex = -1;
+        this.originalShape = null;
+        this.editingHandles = [];
+        this.dragHandle = null;
+
+        // Redraw
+        this.drawBothCanvases();
+        this.updateResults();
+    }
+
+    finishShapeEditing() {
+        if (!this.isEditingShape) return;
+
+        console.log('✅ Finished shape editing - changes accepted');
+
+        // Show confirmation message briefly
+        this.showConfirmationMessage('✅ Rectangle size confirmed!');
+
+        // Reset editing state (keep the modified shape)
+        this.isEditingShape = false;
+        this.editingShapeIndex = -1;
+        this.originalShape = null;
+        this.editingHandles = [];
+        this.dragHandle = null;
+
+        // Redraw and update results
+        this.drawBothCanvases();
+        this.updateResults();
+    }
+
+    // Convert mouse coordinates to rotated coordinate space (to match handle positions)
+    convertMouseToRotatedSpace(mouseX, mouseY) {
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return { x: mouseX, y: mouseY };
+
+        // Get image center in canvas coordinates
+        const imageCenterX = imageInfo.x + imageInfo.width / 2;
+        const imageCenterY = imageInfo.y + imageInfo.height / 2;
+
+        // Convert mouse to relative coordinates from image center
+        const relativeX = mouseX - imageCenterX;
+        const relativeY = mouseY - imageCenterY;
+
+        // Apply rotation to match the rotated coordinate space
+        const angle = (this.imageRotation * Math.PI) / 180;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        const rotatedX = relativeX * cos + relativeY * sin;
+        const rotatedY = -relativeX * sin + relativeY * cos;
+
+        return { x: rotatedX, y: rotatedY };
+    }
+
+    // Editing mouse handlers
+    handleEditingMouseDown(x, y) {
+        // Convert mouse coordinates to rotated space to match handle coordinates
+        const rotatedMouse = this.convertMouseToRotatedSpace(x, y);
+
+        // Check if clicking on a handle
+        for (let i = 0; i < this.editingHandles.length; i++) {
+            const handle = this.editingHandles[i];
+            const distance = Math.sqrt(Math.pow(rotatedMouse.x - handle.x, 2) + Math.pow(rotatedMouse.y - handle.y, 2));
+
+            if (distance <= 8) { // 8px tolerance
+                this.dragHandle = handle;
+                console.log(`🎯 Started dragging ${handle.type} handle: ${handle.position}`);
+                return;
+            }
+        }
+
+        // If not clicking on handle, do nothing (keep editing mode active)
+        // User must press ESC to exit editing mode
+    }
+
+    handleEditingMouseMove(x, y) {
+        if (!this.dragHandle) return;
+
+        const shape = this.shapes[this.editingShapeIndex];
+        if (!shape || shape.type !== 'rectangle') return;
+
+        // Convert canvas coordinates to image coordinates
+        const imageCoords = this.canvasToImageCoords(x, y);
+
+        // Update shape based on handle type and position
+        this.updateShapeFromHandle(shape, this.dragHandle, imageCoords);
+
+        // Regenerate handles for new shape position
+        this.generateEditingHandles();
+
+        // Redraw with black color during editing
+        this.drawBothCanvases();
+    }
+
+    handleEditingMouseUp() {
+        if (this.dragHandle) {
+            console.log(`✅ Finished dragging ${this.dragHandle.type} handle`);
+            this.dragHandle = null;
+
+            // Stay in editing mode - user must press ESC to exit
+            // Regenerate handles in case shape changed significantly
+            this.generateEditingHandles();
+            this.drawBothCanvases();
+        }
+    }
+
+    updateShapeFromHandle(shape, handle, newPos) {
+        const originalLeft = shape.x;
+        const originalTop = shape.y;
+        const originalRight = shape.x + shape.width;
+        const originalBottom = shape.y + shape.height;
+
+        let newLeft = originalLeft;
+        let newTop = originalTop;
+        let newRight = originalRight;
+        let newBottom = originalBottom;
+
+        // Update bounds based on handle position
+        switch (handle.position) {
+            case 'top-left':
+                newLeft = newPos.x;
+                newTop = newPos.y;
+                break;
+            case 'top-right':
+                newRight = newPos.x;
+                newTop = newPos.y;
+                break;
+            case 'bottom-left':
+                newLeft = newPos.x;
+                newBottom = newPos.y;
+                break;
+            case 'bottom-right':
+                newRight = newPos.x;
+                newBottom = newPos.y;
+                break;
+            case 'top':
+                newTop = newPos.y;
+                break;
+            case 'bottom':
+                newBottom = newPos.y;
+                break;
+            case 'left':
+                newLeft = newPos.x;
+                break;
+            case 'right':
+                newRight = newPos.x;
+                break;
+        }
+
+        // Ensure minimum size and correct order
+        if (newLeft > newRight) [newLeft, newRight] = [newRight, newLeft];
+        if (newTop > newBottom) [newTop, newBottom] = [newBottom, newTop];
+
+        const minSize = 10; // Minimum 10 pixels in image coordinates
+        if (newRight - newLeft < minSize) {
+            const center = (newLeft + newRight) / 2;
+            newLeft = center - minSize / 2;
+            newRight = center + minSize / 2;
+        }
+        if (newBottom - newTop < minSize) {
+            const center = (newTop + newBottom) / 2;
+            newTop = center - minSize / 2;
+            newBottom = center + minSize / 2;
+        }
+
+        // Update shape
+        shape.x = newLeft;
+        shape.y = newTop;
+        shape.width = newRight - newLeft;
+        shape.height = newBottom - newTop;
+    }
+
+    // Draw editing handles
+    drawEditingHandles() {
+        if (!this.isEditingShape || this.editingHandles.length === 0) {
+            console.log('⚠️ No editing handles to draw');
+            return;
+        }
+
+        this.leftCtx.save();
+
+        console.log('🎨 Drawing', this.editingHandles.length, 'editing handles');
+
+        // Draw handles with better visibility
+        this.editingHandles.forEach((handle, index) => {
+            const size = handle.type === 'corner' ? 10 : 8; // Make handles bigger
+
+            // Draw white background
+            this.leftCtx.fillStyle = '#ffffff';
+            this.leftCtx.fillRect(handle.x - size/2, handle.y - size/2, size, size);
+
+            // Draw blue border for better visibility
+            this.leftCtx.strokeStyle = '#007acc';
+            this.leftCtx.lineWidth = 2;
+            this.leftCtx.strokeRect(handle.x - size/2, handle.y - size/2, size, size);
+
+            console.log(`Handle ${index}: ${handle.position} at (${handle.x.toFixed(1)}, ${handle.y.toFixed(1)})`);
+        });
+
+        // Draw editing instructions with better visibility
+        this.leftCtx.fillStyle = 'rgba(0, 120, 215, 0.9)'; // Blue background
+        this.leftCtx.fillRect(10, 10, 250, 70);
+
+        // White border
+        this.leftCtx.strokeStyle = '#ffffff';
+        this.leftCtx.lineWidth = 2;
+        this.leftCtx.strokeRect(10, 10, 250, 70);
+
+        this.leftCtx.fillStyle = '#ffffff';
+        this.leftCtx.font = 'bold 14px Arial';
+        this.leftCtx.fillText('🔧 EDITING MODE', 15, 30);
+
+        this.leftCtx.font = '12px Arial';
+        this.leftCtx.fillText('• Drag white squares to resize', 15, 45);
+        this.leftCtx.fillText('• Press ENTER to confirm size', 15, 58);
+        this.leftCtx.fillText('• Press ESC to cancel changes', 15, 71);
+
+        this.leftCtx.restore();
+    }
+
+    showConfirmationMessage(message) {
+        // Create temporary overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 150, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        overlay.textContent = message;
+        document.body.appendChild(overlay);
+
+        // Remove after 2 seconds
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        }, 2000);
     }
 }
 
