@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.3.2";
+const APP_VERSION = "1.4.1";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -19,6 +19,9 @@ class ImageAnalysisApp {
         this.panX = 0;
         this.panY = 0;
         this.currentTool = null;
+        this.isPanning = false;
+        this.lastPanX = 0;
+        this.lastPanY = 0;
         this.shapes = [];
         this.isCalibrating = false;
         this.calibrationPoints = [];
@@ -128,6 +131,11 @@ class ImageAnalysisApp {
             this.clearAllShapes();
         });
 
+        // Delete All Results button
+        document.getElementById('deleteAllResultsBtn').addEventListener('click', () => {
+            this.clearAllShapes();
+        });
+
         // Zoom controls
         document.getElementById('zoomInBtn').addEventListener('click', () => {
             this.zoomIn();
@@ -190,9 +198,14 @@ class ImageAnalysisApp {
         this.leftCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.leftCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.leftCanvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        this.leftCanvas.addEventListener('contextmenu', (e) => e.preventDefault()); // Disable right-click menu
 
-        // Right canvas also needs wheel events for zoom synchronization
+        // Right canvas also needs wheel events for zoom synchronization and pan events
         this.rightCanvas.addEventListener('wheel', (e) => this.handleWheel(e));
+        this.rightCanvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.rightCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.rightCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        this.rightCanvas.addEventListener('contextmenu', (e) => e.preventDefault()); // Disable right-click menu
     }
 
     setupFileUpload() {
@@ -666,10 +679,20 @@ class ImageAnalysisApp {
 
     // Mouse event handlers
     handleMouseDown(e) {
-        const rect = this.leftCanvas.getBoundingClientRect();
+        const rect = e.target.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        if (e.button === 2) { // Right mouse button
+            // Start panning
+            this.isPanning = true;
+            this.lastPanX = e.clientX;
+            this.lastPanY = e.clientY;
+            e.preventDefault();
+            return;
+        }
+
+        // Left mouse button (button === 0)
         if (this.isCalibrating) {
             this.addCalibrationPoint(x, y);
         } else if (this.currentTool) {
@@ -681,7 +704,22 @@ class ImageAnalysisApp {
     }
 
     handleMouseMove(e) {
-        const rect = this.leftCanvas.getBoundingClientRect();
+        if (this.isPanning) {
+            // Pan the canvas
+            const deltaX = e.clientX - this.lastPanX;
+            const deltaY = e.clientY - this.lastPanY;
+
+            this.panX += deltaX;
+            this.panY += deltaY;
+
+            this.lastPanX = e.clientX;
+            this.lastPanY = e.clientY;
+
+            this.drawBothCanvases();
+            return;
+        }
+
+        const rect = e.target.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
@@ -691,6 +729,11 @@ class ImageAnalysisApp {
     }
 
     handleMouseUp(e) {
+        if (e.button === 2) { // Right mouse button
+            this.isPanning = false;
+            return;
+        }
+
         if (this.currentTool && window.CanvasTools) {
             window.CanvasTools.handleMouseUp(this.currentTool, this);
         }
@@ -834,11 +877,16 @@ class ImageAnalysisApp {
     // Results and calculations
     updateResults() {
         const resultsArea = document.getElementById('resultsArea');
+        const deleteAllBtn = document.getElementById('deleteAllResultsBtn');
 
         if (this.shapes.length === 0) {
             resultsArea.innerHTML = '<p class="no-results">No measurements yet</p>';
+            deleteAllBtn.style.display = 'none';
             return;
         }
+
+        // Show delete all button when there are shapes
+        deleteAllBtn.style.display = 'inline-block';
 
         let html = '';
         this.shapes.forEach((shape, index) => {
