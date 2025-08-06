@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.4.2";
+const APP_VERSION = "1.4.3";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -648,13 +648,12 @@ class ImageAnalysisApp {
     }
 
     updateImageInfo() {
-        const info = document.getElementById('imageInfo');
+        const headerInfo = document.getElementById('imageInfoHeader').querySelector('.image-info-text');
         if (this.image) {
-            info.innerHTML = `
-                <p><strong>Dimensions:</strong> ${this.image.width} × ${this.image.height} px</p>
-                <p><strong>Aspect Ratio:</strong> ${(this.image.width / this.image.height).toFixed(2)}</p>
-                <p><strong>Scale:</strong> ${this.scale > 0 ? (1/this.scale).toFixed(3) + ' px/mm' : 'Not calibrated'}</p>
-            `;
+            const scaleText = this.scale > 0 ? `Scale: ${(1/this.scale).toFixed(2)} px/mm` : 'Scale: Not set';
+            headerInfo.textContent = `Image: ${this.image.width}×${this.image.height} | ${scaleText}`;
+        } else {
+            headerInfo.textContent = 'No image loaded';
         }
     }
 
