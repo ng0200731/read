@@ -257,17 +257,91 @@ button:disabled {
 .split-canvas-container {
     flex: 1;
     display: flex;
-    gap: 2px;
     overflow: hidden;
+    position: relative;
 }
 
 .canvas-half {
-    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     background: #1e1e1e;
     border: 1px solid #3e3e42;
+}
+
+.canvas-half.left-canvas {
+    width: 50%; /* Default 50/50 split */
+}
+
+.canvas-half.right-canvas {
+    width: 50%; /* Default 50/50 split */
+}
+
+/* Resizable Divider */
+.canvas-divider {
+    width: 6px;
+    background: #3e3e42;
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    border-left: 1px solid #555;
+    border-right: 1px solid #555;
+    transition: background-color 0.2s ease;
+}
+
+.canvas-divider:hover {
+    background: #007acc;
+}
+
+.canvas-divider.dragging {
+    background: #007acc;
+}
+
+.divider-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 40px;
+    background: #666;
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.canvas-divider:hover .divider-handle {
+    background: #fff;
+}
+
+/* Reset Button on Divider */
+.divider-reset-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    background: #3e3e42;
+    border: 1px solid #666;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.divider-reset-btn:hover {
+    background: #007acc;
+    color: #fff;
+    border-color: #007acc;
+}
+
+.divider-reset-btn:active {
+    transform: translateX(-50%) scale(0.95);
 }
 
 .canvas-half.left-canvas {

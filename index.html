@@ -56,6 +56,12 @@
                         </div>
                     </div>
 
+                    <!-- Resizable Divider -->
+                    <div class="canvas-divider" id="canvasDivider">
+                        <div class="divider-handle"></div>
+                        <button class="divider-reset-btn" id="resetSplitBtn" title="Reset to 50/50">⚌</button>
+                    </div>
+
                     <!-- Right Panel - Rectangles only (with dimensions) -->
                     <div class="canvas-half right-canvas">
                         <div class="canvas-header">
@@ -98,8 +104,8 @@
                         <button class="btn-secondary" id="calibrateBtn" disabled>Set Scale</button>
                         <div class="calibration-input" id="calibrationInput" style="display: none;">
                             <label>Real measurement (mm):</label>
-                            <input type="number" id="realMeasurement" placeholder="Enter mm">
-                            <button class="btn-primary" id="confirmCalibration">Confirm</button>
+                            <input type="number" id="realMeasurement" placeholder="Enter mm" disabled>
+                            <button class="btn-primary" id="confirmCalibration" disabled>Confirm</button>
                             <button class="btn-secondary" id="cancelCalibration">Cancel</button>
                         </div>
                         <div class="scale-info" id="scaleInfo"></div>
@@ -113,7 +119,7 @@
                         <select id="detectionToolSelect" class="tool-dropdown" disabled>
                             <option value="">Choose a tool...</option>
                             <option value="autoDetect">Auto Detection</option>
-                            <option value="rectangle">Rectangle</option>
+                            <option value="rectangle" selected>Rectangle</option>
                             <option value="circle">Circle</option>
                             <option value="polygon">Polygon</option>
                         </select>

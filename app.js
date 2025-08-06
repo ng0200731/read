@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.8.3";
+const APP_VERSION = "1.9.1";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -196,6 +196,106 @@ class ImageAnalysisApp {
         this.rightCanvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.rightCanvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.rightCanvas.addEventListener('contextmenu', (e) => e.preventDefault()); // Disable right-click menu
+
+        // Setup resizable divider
+        this.setupResizableDivider();
+    }
+
+    // Setup resizable divider between canvas panels
+    setupResizableDivider() {
+        const divider = document.getElementById('canvasDivider');
+        const leftPanel = document.querySelector('.canvas-half.left-canvas');
+        const rightPanel = document.querySelector('.canvas-half.right-canvas');
+        const container = document.querySelector('.split-canvas-container');
+
+        if (!divider || !leftPanel || !rightPanel || !container) return;
+
+        let isResizing = false;
+        let startX = 0;
+        let startLeftWidth = 0;
+        let startRightWidth = 0;
+
+        const startResize = (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startLeftWidth = leftPanel.offsetWidth;
+            startRightWidth = rightPanel.offsetWidth;
+
+            divider.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            console.log('🔄 Starting panel resize');
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+
+            const deltaX = e.clientX - startX;
+            const containerWidth = container.offsetWidth - 6; // Subtract divider width
+
+            // Calculate new widths
+            const newLeftWidth = startLeftWidth + deltaX;
+            const newRightWidth = startRightWidth - deltaX;
+
+            // Enforce minimum widths (20% each)
+            const minWidth = containerWidth * 0.2;
+            const maxLeftWidth = containerWidth - minWidth;
+            const maxRightWidth = containerWidth - minWidth;
+
+            if (newLeftWidth >= minWidth && newLeftWidth <= maxLeftWidth) {
+                const leftPercent = (newLeftWidth / containerWidth) * 100;
+                const rightPercent = (newRightWidth / containerWidth) * 100;
+
+                leftPanel.style.width = `${leftPercent}%`;
+                rightPanel.style.width = `${rightPercent}%`;
+
+                // Simple space shift - no canvas resizing needed
+            }
+        };
+
+        const stopResize = () => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            divider.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            console.log('✅ Panel resize completed');
+        };
+
+        // Mouse events
+        divider.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+
+        // Touch events for mobile
+        divider.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startResize(e.touches[0]);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            doResize(e.touches[0]);
+        });
+
+        document.addEventListener('touchend', stopResize);
+
+        // Reset button functionality
+        const resetButton = document.getElementById('resetSplitBtn');
+        if (resetButton) {
+            resetButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent divider drag
+
+                // Reset to 50/50 split
+                leftPanel.style.width = '50%';
+                rightPanel.style.width = '50%';
+
+                console.log('🔄 Reset panels to 50/50 split');
+            });
+        }
     }
 
 
@@ -865,8 +965,29 @@ class ImageAnalysisApp {
             document.getElementById(id).disabled = false;
         });
 
-        // Enable detection tool dropdown
-        document.getElementById('detectionToolSelect').disabled = false;
+        // Detection tools state depends on scale
+        this.updateDetectionToolsState();
+    }
+
+    // Enable/disable detection tools based on scale status
+    updateDetectionToolsState() {
+        const detectionToolSelect = document.getElementById('detectionToolSelect');
+        const isScaleSet = this.scale > 0;
+
+        if (detectionToolSelect) {
+            detectionToolSelect.disabled = !isScaleSet;
+
+            if (isScaleSet) {
+                // Set default to rectangle when enabled
+                detectionToolSelect.value = 'rectangle';
+                this.setTool('rectangle');
+                console.log('🔧 Detection tools ENABLED - Scale is set');
+            } else {
+                detectionToolSelect.value = '';
+                this.setTool(null);
+                console.log('🔒 Detection tools DISABLED - Scale not set');
+            }
+        }
     }
 
     // Mouse event handlers
@@ -968,8 +1089,45 @@ class ImageAnalysisApp {
             if (this.calibrationPoints.length === 2) {
                 document.getElementById('calibrationInput').style.display = 'block';
                 document.getElementById('canvasInstructions').textContent = 'Enter the real measurement';
+
+                // Enable input field and auto-focus
+                setTimeout(() => {
+                    const realMeasurementInput = document.getElementById('realMeasurement');
+                    realMeasurementInput.disabled = false; // Enable input
+                    realMeasurementInput.focus();
+                    realMeasurementInput.select(); // Select any existing text
+
+                    // Setup real-time validation for submit button
+                    this.setupMeasurementValidation();
+                }, 100);
             }
         }
+    }
+
+    // Setup real-time validation for measurement input
+    setupMeasurementValidation() {
+        const realMeasurementInput = document.getElementById('realMeasurement');
+        const confirmButton = document.getElementById('confirmCalibration');
+
+        const validateInput = () => {
+            const value = realMeasurementInput.value.trim();
+            const isValid = value !== '' && !isNaN(value) && parseFloat(value) > 0;
+
+            confirmButton.disabled = !isValid;
+
+            if (isValid) {
+                console.log('✅ Valid measurement entered:', value);
+            } else {
+                console.log('❌ Invalid measurement:', value || '(empty)');
+            }
+        };
+
+        // Validate on input change
+        realMeasurementInput.addEventListener('input', validateInput);
+        realMeasurementInput.addEventListener('keyup', validateInput);
+
+        // Initial validation
+        validateInput();
     }
 
     confirmCalibration() {
@@ -990,12 +1148,15 @@ class ImageAnalysisApp {
         
         document.getElementById('calibrationInput').style.display = 'none';
         document.getElementById('realMeasurement').value = '';
+        document.getElementById('realMeasurement').disabled = true; // Disable input after success
+        document.getElementById('confirmCalibration').disabled = true; // Disable submit button
         document.getElementById('calibrateBtn').textContent = 'Set Scale';
         document.getElementById('calibrateBtn').disabled = false;
         document.getElementById('canvasInstructions').textContent = 'Scale calibrated successfully';
         
         this.updateScaleInfo();
         this.updateImageInfo();
+        this.updateDetectionToolsState(); // Enable detection tools now that scale is set
         this.drawImage();
     }
 
