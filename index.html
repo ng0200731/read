@@ -17,7 +17,7 @@
                 </div>
                 <div class="version-info">
                     <span class="version-label">Version</span>
-                    <span class="version-number" id="versionNumber">1.2.5</span>
+                    <span class="version-number" id="versionNumber">1.3.2</span>
                 </div>
             </div>
         </header>
@@ -86,7 +86,15 @@
                             <canvas id="leftCanvas"></canvas>
                             <div class="canvas-overlay" id="leftCanvasOverlay">
                                 <div class="canvas-instructions" id="canvasInstructions">
-                                    Upload an image to get started
+                                    <div class="upload-icon">📁</div>
+                                    <strong>Click here to browse files</strong><br>
+                                    <small>or drag & drop JPG/GIF images here</small><br>
+                                    <small>or press <kbd>Ctrl+V</kbd> to paste</small><br>
+                                    <small class="file-limit">Max 10MB • JPG/GIF only</small>
+                                </div>
+                                <div class="drag-indicator" style="display: none;">
+                                    <div style="font-size: 48px; margin-bottom: 16px;">📥</div>
+                                    <div style="font-size: 18px; color: #007acc; font-weight: bold;">Drop JPG/GIF here!</div>
                                 </div>
                             </div>
                         </div>

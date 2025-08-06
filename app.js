@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.2";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -31,6 +31,7 @@ class ImageAnalysisApp {
         this.setupCanvas();
         this.setupEventListeners();
         this.setupFileUpload();
+        this.setupCanvasUpload();
         this.initializeVersion();
         console.log(`Image Analysis App v${this.version} initialized`);
     }
@@ -196,24 +197,44 @@ class ImageAnalysisApp {
 
     setupFileUpload() {
         const uploadArea = document.getElementById('uploadArea');
+        console.log('🎯 Setting up file upload for:', uploadArea);
 
-        // Drag and drop
+        // Enhanced drag and drop with better visual feedback
+        uploadArea.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+            console.log('📥 Drag enter on upload area');
+        });
+
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only remove dragover if we're actually leaving the upload area
+            if (!uploadArea.contains(e.relatedTarget)) {
+                uploadArea.classList.remove('dragover');
+                console.log('📤 Drag leave from upload area');
+            }
         });
 
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             uploadArea.classList.remove('dragover');
+            console.log('🎯 Drop on upload area');
 
             const files = e.dataTransfer.files;
             if (files.length > 0) {
+                console.log('📁 Processing dropped file:', files[0].name);
                 this.handleFileSelect(files[0]);
+            } else {
+                console.log('❌ No files in drop event');
             }
         });
 
@@ -224,6 +245,78 @@ class ImageAnalysisApp {
 
         // Clipboard support (Ctrl+V to paste images)
         this.setupClipboardSupport();
+    }
+
+    setupCanvasUpload() {
+        const canvasOverlay = document.getElementById('leftCanvasOverlay');
+        const canvasInstructions = document.getElementById('canvasInstructions');
+        const dragIndicator = document.querySelector('.drag-indicator');
+
+        console.log('🎯 Setting up canvas upload for:', canvasOverlay);
+
+        // Enhanced drag and drop with better visual feedback
+        canvasOverlay.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            canvasOverlay.classList.add('dragover');
+            this.showCanvasDragIndicator(true);
+            console.log('📥 Drag enter on canvas');
+        });
+
+        canvasOverlay.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            canvasOverlay.classList.add('dragover');
+        });
+
+        canvasOverlay.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Only remove dragover if we're actually leaving the canvas overlay
+            if (!canvasOverlay.contains(e.relatedTarget)) {
+                canvasOverlay.classList.remove('dragover');
+                this.showCanvasDragIndicator(false);
+                console.log('📤 Drag leave from canvas');
+            }
+        });
+
+        canvasOverlay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            canvasOverlay.classList.remove('dragover');
+            this.showCanvasDragIndicator(false);
+            console.log('🎯 Drop on canvas');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                console.log('📁 Processing dropped file on canvas:', files[0].name);
+                this.handleFileSelect(files[0]);
+            } else {
+                console.log('❌ No files in canvas drop event');
+            }
+        });
+
+        // Click to upload on canvas
+        canvasOverlay.addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        console.log('✅ Canvas upload setup complete');
+    }
+
+    showCanvasDragIndicator(show) {
+        const instructions = document.getElementById('canvasInstructions');
+        const dragIndicator = document.querySelector('.drag-indicator');
+
+        if (instructions && dragIndicator) {
+            if (show) {
+                instructions.style.display = 'none';
+                dragIndicator.style.display = 'block';
+            } else {
+                instructions.style.display = 'block';
+                dragIndicator.style.display = 'none';
+            }
+        }
     }
 
     setupClipboardSupport() {
@@ -323,10 +416,31 @@ class ImageAnalysisApp {
     }
 
     handleFileSelect(file) {
-        if (!file || !file.type.startsWith('image/')) {
-            alert('Please select a valid image file');
+        console.log('📁 File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+
+        if (!file) {
+            alert('No file selected');
             return;
         }
+
+        // Validate file type - only JPG and GIF allowed
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/gif'];
+        if (!allowedTypes.includes(file.type.toLowerCase())) {
+            alert('Please select a JPG or GIF image file only.\nSelected file type: ' + file.type);
+            console.log('❌ Invalid file type:', file.type);
+            return;
+        }
+
+        // Validate file size - must be less than 10MB
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+            alert('File size must be less than 10MB.\nCurrent size: ' + fileSizeMB + 'MB');
+            console.log('❌ File too large:', fileSizeMB + 'MB');
+            return;
+        }
+
+        console.log('✅ File validation passed - Type:', file.type, 'Size:', (file.size / 1024 / 1024).toFixed(1) + 'MB');
 
         const reader = new FileReader();
         reader.onload = (e) => {

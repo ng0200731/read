@@ -130,7 +130,7 @@ body {
     padding: 24px;
     text-align: center;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .upload-area:hover {
@@ -140,6 +140,9 @@ body {
 .upload-area.dragover {
     border-color: #007acc;
     background: #1a1a1a;
+    box-shadow: 0 0 20px rgba(0, 122, 204, 0.3);
+    transform: scale(1.02);
+    transition: all 0.2s ease;
 }
 
 .upload-icon {
@@ -307,11 +310,42 @@ button:disabled {
     align-items: center;
     justify-content: center;
     background: rgba(30, 30, 30, 0.9);
-    pointer-events: none;
+    pointer-events: all;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px dashed transparent;
+    color: #cccccc;
+    font-size: 14px;
 }
 
 .canvas-overlay.hidden {
     display: none;
+}
+
+.canvas-overlay:hover {
+    border-color: #007acc;
+}
+
+.canvas-overlay.dragover {
+    border-color: #007acc;
+    background: rgba(0, 122, 204, 0.1);
+    box-shadow: 0 0 20px rgba(0, 122, 204, 0.3);
+    transform: scale(1.01);
+}
+
+.canvas-overlay .upload-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.canvas-overlay .file-limit {
+    color: #969696;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.canvas-overlay .drag-indicator {
+    text-align: center;
 }
 
 #rightCanvasOverlay {
