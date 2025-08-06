@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.9.1";
+const APP_VERSION = "1.9.3";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -596,7 +596,7 @@ class ImageAnalysisApp {
             instructions.textContent = 'Select a tool to start drawing';
         }
 
-        console.log('🧹 All settings cleared for new image');
+        console.log('🧹 All settings cleared for new image - Scale reset to 0, detection tools disabled');
     }
 
     // Draw both canvases
@@ -965,8 +965,12 @@ class ImageAnalysisApp {
             document.getElementById(id).disabled = false;
         });
 
-        // Detection tools state depends on scale
-        this.updateDetectionToolsState();
+        // Detection tools disabled when image loads - enabled only after calibration
+        const detectionToolSelect = document.getElementById('detectionToolSelect');
+        if (detectionToolSelect) {
+            detectionToolSelect.disabled = true;
+            detectionToolSelect.value = '';
+        }
     }
 
     // Enable/disable detection tools based on scale status
