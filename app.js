@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.5.1";
+const APP_VERSION = "1.8.3";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -102,25 +102,31 @@ class ImageAnalysisApp {
             this.cancelCalibration();
         });
 
-        // Tools
-        document.getElementById('autoDetectBtn').addEventListener('click', () => {
-            this.autoDetectShapes();
-        });
+        // Detection Tool Dropdown
+        document.getElementById('detectionToolSelect').addEventListener('change', (e) => {
+            const selectedTool = e.target.value;
 
-        document.getElementById('rectangleToolBtn').addEventListener('click', () => {
-            this.setTool('rectangle');
-        });
-
-        document.getElementById('circleToolBtn').addEventListener('click', () => {
-            this.setTool('circle');
-        });
-
-        document.getElementById('polygonToolBtn').addEventListener('click', () => {
-            this.setTool('polygon');
-        });
-
-        document.getElementById('clearAllBtn').addEventListener('click', () => {
-            this.clearAllShapes();
+            switch (selectedTool) {
+                case 'autoDetect':
+                    this.autoDetectShapes();
+                    // Reset dropdown after auto detection
+                    e.target.value = '';
+                    break;
+                case 'rectangle':
+                    this.setTool('rectangle');
+                    break;
+                case 'circle':
+                    this.setTool('circle');
+                    break;
+                case 'polygon':
+                    this.setTool('polygon');
+                    break;
+                default:
+                    // Clear current tool if no valid selection
+                    this.currentTool = null;
+                    document.getElementById('canvasInstructions').textContent = 'Select a tool to start drawing';
+                    break;
+            }
         });
 
         // Delete All Results button
@@ -385,6 +391,33 @@ class ImageAnalysisApp {
             return;
         }
 
+        // Check if there's already an image loaded with settings
+        if (this.image && (this.shapes.length > 0 || this.scale !== 1 || this.isCalibrated)) {
+            const hasShapes = this.shapes.length > 0;
+            const hasCalibration = this.isCalibrated;
+            const hasSettings = hasShapes || hasCalibration;
+
+            if (hasSettings) {
+                let message = 'Loading a new image will delete all present settings:\n\n';
+                if (hasShapes) {
+                    message += `• ${this.shapes.length} rectangle(s) will be deleted\n`;
+                }
+                if (hasCalibration) {
+                    message += '• Calibration settings will be reset\n';
+                }
+                message += '• All measurements will be cleared\n\n';
+                message += 'Do you want to continue?';
+
+                const confirmed = confirm(message);
+                if (!confirmed) {
+                    console.log('🚫 User cancelled image loading');
+                    return;
+                }
+
+                console.log('✅ User confirmed - clearing all settings');
+            }
+        }
+
         // Validate file type - only JPG and GIF allowed
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/gif'];
         if (!allowedTypes.includes(file.type.toLowerCase())) {
@@ -414,11 +447,14 @@ class ImageAnalysisApp {
     loadImage(src) {
         const img = new Image();
         img.onload = () => {
+            // Clear all existing settings
+            this.clearAllSettings();
+
             this.originalImage = img; // Store original
             this.image = img;
             this.rotation = 0; // Reset rotation
             this.resetZoom();
-            this.drawImage();
+            this.drawBothCanvases();
             this.updateImageInfo();
             this.enableControls();
 
@@ -429,23 +465,57 @@ class ImageAnalysisApp {
         img.src = src;
     }
 
+    // Clear all settings when loading new image
+    clearAllSettings() {
+        // Clear shapes
+        this.shapes = [];
+
+        // Reset calibration
+        this.scale = 1;
+        this.isCalibrated = false;
+        this.calibrationPoints = [];
+
+        // Reset tool selection
+        this.currentTool = null;
+        const dropdown = document.getElementById('detectionToolSelect');
+        if (dropdown) dropdown.value = '';
+
+        // Clear results
+        this.updateResults();
+
+        // Reset scale info display
+        const scaleInfo = document.getElementById('scaleInfo');
+        if (scaleInfo) {
+            scaleInfo.textContent = 'Scale: Not calibrated';
+            scaleInfo.style.display = 'none';
+        }
+
+        // Reset canvas instructions
+        const instructions = document.getElementById('canvasInstructions');
+        if (instructions) {
+            instructions.textContent = 'Select a tool to start drawing';
+        }
+
+        console.log('🧹 All settings cleared for new image');
+    }
+
     // Draw both canvases
     drawBothCanvases() {
         this.drawLeftCanvas();
         this.drawRightCanvas();
     }
 
-    // Draw left canvas (image + rectangles without dimensions)
+    // Draw left canvas (image + rectangles without dimensions) with rotation
     drawLeftCanvas() {
-        if (!this.image || !this.leftCanvas || !this.leftCtx) return;
+        if (!this.originalImage || !this.leftCanvas || !this.leftCtx) return;
 
         // Store current canvas state to prevent interference
         this.leftCtx.save();
 
         this.leftCtx.clearRect(0, 0, this.leftCanvas.width, this.leftCanvas.height);
 
-        // Calculate image position and size
-        const imgAspect = this.image.width / this.image.height;
+        // Calculate image position and size using ORIGINAL image
+        const imgAspect = this.originalImage.width / this.originalImage.height;
         const canvasAspect = this.leftCanvas.width / this.leftCanvas.height;
 
         let drawWidth, drawHeight;
@@ -460,27 +530,40 @@ class ImageAnalysisApp {
         const x = (this.leftCanvas.width - drawWidth) / 2 + this.panX;
         const y = (this.leftCanvas.height - drawHeight) / 2 + this.panY;
 
-        // Ensure we have valid drawing coordinates
-        if (isFinite(x) && isFinite(y) && isFinite(drawWidth) && isFinite(drawHeight) &&
-            drawWidth > 0 && drawHeight > 0) {
-            this.leftCtx.drawImage(this.image, x, y, drawWidth, drawHeight);
+        // Apply rotation transform around image center for BOTH image and shapes
+        this.leftCtx.save();
+
+        // Move to image center
+        const imageCenterX = x + drawWidth / 2;
+        const imageCenterY = y + drawHeight / 2;
+        this.leftCtx.translate(imageCenterX, imageCenterY);
+
+        // Rotate
+        this.leftCtx.rotate((this.rotation * Math.PI) / 180);
+
+        // Draw image centered at origin (after rotation)
+        if (isFinite(drawWidth) && isFinite(drawHeight) && drawWidth > 0 && drawHeight > 0) {
+            this.leftCtx.drawImage(this.originalImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         }
 
-        // Draw shapes WITHOUT dimensions
-        this.drawShapesLeft();
+        // Draw shapes WITHOUT dimensions (shapes will be converted from image coords to rotated canvas coords)
+        this.drawShapesLeftInRotatedSpace();
 
-        // Draw calibration points if calibrating
+        // Draw calibration points if calibrating (in rotated coordinate system)
         if (this.isCalibrating) {
             this.drawCalibrationPointsLeft();
         }
+
+        // Restore rotation transform
+        this.leftCtx.restore();
 
         // Restore canvas state
         this.leftCtx.restore();
     }
 
-    // Draw right canvas (rectangles only with dimensions)
+    // Draw right canvas (rectangles only with dimensions) - SYNCHRONIZED with left canvas
     drawRightCanvas() {
-        if (!this.rightCanvas || !this.rightCtx) return;
+        if (!this.rightCanvas || !this.rightCtx || !this.originalImage) return;
 
         // Store current canvas state
         this.rightCtx.save();
@@ -489,8 +572,38 @@ class ImageAnalysisApp {
         this.rightCtx.fillStyle = '#1a1a1a';
         this.rightCtx.fillRect(0, 0, this.rightCanvas.width, this.rightCanvas.height);
 
-        // Draw shapes WITH dimensions (no image background)
-        this.drawShapesRight();
+        // Apply SAME rotation transform as left canvas for synchronization
+        this.rightCtx.save();
+
+        // Calculate image position and size (same as left canvas)
+        const imgAspect = this.originalImage.width / this.originalImage.height;
+        const canvasAspect = this.rightCanvas.width / this.rightCanvas.height;
+
+        let drawWidth, drawHeight;
+        if (imgAspect > canvasAspect) {
+            drawWidth = this.rightCanvas.width * this.zoom;
+            drawHeight = drawWidth / imgAspect;
+        } else {
+            drawHeight = this.rightCanvas.height * this.zoom;
+            drawWidth = drawHeight * imgAspect;
+        }
+
+        const x = (this.rightCanvas.width - drawWidth) / 2 + this.panX;
+        const y = (this.rightCanvas.height - drawHeight) / 2 + this.panY;
+
+        // Move to image center (same as left canvas)
+        const imageCenterX = x + drawWidth / 2;
+        const imageCenterY = y + drawHeight / 2;
+        this.rightCtx.translate(imageCenterX, imageCenterY);
+
+        // Apply SAME rotation as left canvas
+        this.rightCtx.rotate((this.rotation * Math.PI) / 180);
+
+        // Draw shapes WITH dimensions (in rotated coordinate system)
+        this.drawShapesRightInRotatedSpace();
+
+        // Restore rotation transform
+        this.rightCtx.restore();
 
         // Restore canvas state
         this.rightCtx.restore();
@@ -509,6 +622,66 @@ class ImageAnalysisApp {
         }
     }
 
+    // Draw shapes in rotated coordinate space (shapes stored in image coordinates)
+    drawShapesLeftInRotatedSpace() {
+        if (!this.originalImage || !window.CanvasTools) return;
+
+        // Get image info for scaling
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return;
+
+        // Convert shapes from image coordinates to rotated canvas coordinates
+        const convertedShapes = this.shapes.map(shape => {
+            const convertedShape = { ...shape };
+
+            switch (shape.type) {
+                case 'rectangle':
+                    // Convert image coordinates to rotated canvas coordinates
+                    const topLeft = this.imageToCanvasCoordsInRotatedSpace(shape.x, shape.y, imageInfo);
+                    convertedShape.x = topLeft.x;
+                    convertedShape.y = topLeft.y;
+
+                    // Scale dimensions
+                    convertedShape.width = (shape.width / this.originalImage.width) * imageInfo.width;
+                    convertedShape.height = (shape.height / this.originalImage.height) * imageInfo.height;
+                    break;
+
+                case 'circle':
+                    // Convert center coordinates
+                    const center = this.imageToCanvasCoordsInRotatedSpace(shape.centerX, shape.centerY, imageInfo);
+                    convertedShape.centerX = center.x;
+                    convertedShape.centerY = center.y;
+
+                    // Scale radius
+                    convertedShape.radius = (shape.radius / this.originalImage.width) * imageInfo.width;
+                    break;
+
+                case 'polygon':
+                case 'detected-contour':
+                    if (shape.points) {
+                        convertedShape.points = shape.points.map(point =>
+                            this.imageToCanvasCoordsInRotatedSpace(point.x, point.y, imageInfo)
+                        );
+                    }
+                    break;
+            }
+
+            return convertedShape;
+        });
+
+        // Draw converted shapes (they're now in rotated canvas space, so no additional transforms needed)
+        window.CanvasTools.drawShapesWithoutDimensionsRaw(this.leftCtx, convertedShapes);
+    }
+
+    // Convert image coordinates to canvas coordinates in rotated space (relative to rotated image center)
+    imageToCanvasCoordsInRotatedSpace(imageX, imageY, imageInfo) {
+        // Convert from image coordinates to scaled coordinates relative to image center
+        const relativeX = (imageX / this.originalImage.width - 0.5) * imageInfo.width;
+        const relativeY = (imageY / this.originalImage.height - 0.5) * imageInfo.height;
+
+        return { x: relativeX, y: relativeY };
+    }
+
     // Draw shapes on right canvas (with dimensions)
     drawShapesRight() {
         if (window.CanvasTools) {
@@ -517,20 +690,71 @@ class ImageAnalysisApp {
         }
     }
 
+    // Draw shapes in rotated coordinate space for right canvas (with dimensions)
+    drawShapesRightInRotatedSpace() {
+        if (!this.originalImage || !window.CanvasTools) return;
+
+        // Get image info for scaling (use right canvas info)
+        const imageInfo = this.getImageDrawInfoRight();
+        if (!imageInfo) return;
+
+        // Convert shapes from image coordinates to rotated canvas coordinates
+        const convertedShapes = this.shapes.map(shape => {
+            const convertedShape = { ...shape };
+
+            switch (shape.type) {
+                case 'rectangle':
+                    // Convert image coordinates to rotated canvas coordinates
+                    const topLeft = this.imageToCanvasCoordsInRotatedSpace(shape.x, shape.y, imageInfo);
+                    convertedShape.x = topLeft.x;
+                    convertedShape.y = topLeft.y;
+
+                    // Scale dimensions
+                    convertedShape.width = (shape.width / this.originalImage.width) * imageInfo.width;
+                    convertedShape.height = (shape.height / this.originalImage.height) * imageInfo.height;
+                    break;
+
+                case 'circle':
+                    // Convert center coordinates
+                    const center = this.imageToCanvasCoordsInRotatedSpace(shape.centerX, shape.centerY, imageInfo);
+                    convertedShape.centerX = center.x;
+                    convertedShape.centerY = center.y;
+
+                    // Scale radius
+                    convertedShape.radius = (shape.radius / this.originalImage.width) * imageInfo.width;
+                    break;
+
+                case 'polygon':
+                case 'detected-contour':
+                    if (shape.points) {
+                        convertedShape.points = shape.points.map(point =>
+                            this.imageToCanvasCoordsInRotatedSpace(point.x, point.y, imageInfo)
+                        );
+                    }
+                    break;
+            }
+
+            return convertedShape;
+        });
+
+        // Draw converted shapes WITH dimensions (they're now in rotated canvas space)
+        window.CanvasTools.drawShapesWithDimensionsRaw(this.rightCtx, convertedShapes, this.scale);
+    }
+
     // Legacy method for compatibility
     drawShapes() {
         this.drawShapesLeft();
     }
 
     getImageDrawInfoLeft() {
-        if (!this.image) return null;
+        if (!this.originalImage) return null;
 
         const canvasWidth = this.leftCanvas.width;
         const canvasHeight = this.leftCanvas.height;
 
-        // Calculate scaled dimensions
-        const scaledWidth = this.image.width * this.zoom;
-        const scaledHeight = this.image.height * this.zoom;
+        // Calculate scaled dimensions using ORIGINAL image
+        const scaledWidth = this.originalImage.width * this.zoom;
+        const scaledHeight = this.originalImage.height * this.zoom;
 
         // Calculate position (centered + pan offset)
         const x = (canvasWidth - scaledWidth) / 2 + this.panX;
@@ -541,20 +765,21 @@ class ImageAnalysisApp {
             y: y,
             width: scaledWidth,
             height: scaledHeight,
-            originalWidth: this.image.width,
-            originalHeight: this.image.height
+            originalWidth: this.originalImage.width,
+            originalHeight: this.originalImage.height,
+            rotation: this.rotation // Include rotation info
         };
     }
 
     getImageDrawInfoRight() {
-        if (!this.image) return null;
+        if (!this.originalImage) return null;
 
         const canvasWidth = this.rightCanvas.width;
         const canvasHeight = this.rightCanvas.height;
 
-        // Calculate scaled dimensions (same as left for synchronization)
-        const scaledWidth = this.image.width * this.zoom;
-        const scaledHeight = this.image.height * this.zoom;
+        // Calculate scaled dimensions (same as left for synchronization) using ORIGINAL image
+        const scaledWidth = this.originalImage.width * this.zoom;
+        const scaledHeight = this.originalImage.height * this.zoom;
 
         // Calculate position (centered + pan offset)
         const x = (canvasWidth - scaledWidth) / 2 + this.panX;
@@ -565,8 +790,9 @@ class ImageAnalysisApp {
             y: y,
             width: scaledWidth,
             height: scaledHeight,
-            originalWidth: this.image.width,
-            originalHeight: this.image.height
+            originalWidth: this.originalImage.width,
+            originalHeight: this.originalImage.height,
+            rotation: this.rotation // Include rotation info
         };
     }
 
@@ -576,22 +802,39 @@ class ImageAnalysisApp {
     }
 
     drawCalibrationPointsLeft() {
+        if (!this.originalImage) return;
+
         this.leftCtx.fillStyle = 'red';
         this.leftCtx.strokeStyle = 'red';
         this.leftCtx.lineWidth = 2;
+        this.leftCtx.font = '12px Arial';
 
-        this.calibrationPoints.forEach((point, index) => {
-            this.leftCtx.beginPath();
-            this.leftCtx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            this.leftCtx.fill();
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return;
 
-            this.leftCtx.fillText(`P${index + 1}`, point.x + 10, point.y - 10);
+        // Convert calibration points from image coordinates to rotated canvas coordinates
+        const canvasPoints = this.calibrationPoints.map((point, index) => {
+            const canvasCoords = this.imageToCanvasCoordsInRotatedSpace(point.x, point.y, imageInfo);
+
+            console.log(`📍 Calibration point ${index + 1}: Image (${point.x.toFixed(1)}, ${point.y.toFixed(1)}) → Canvas (${canvasCoords.x.toFixed(1)}, ${canvasCoords.y.toFixed(1)})`);
+
+            return canvasCoords;
         });
 
-        if (this.calibrationPoints.length === 2) {
+        // Draw calibration points at converted coordinates
+        canvasPoints.forEach((canvasPoint, index) => {
             this.leftCtx.beginPath();
-            this.leftCtx.moveTo(this.calibrationPoints[0].x, this.calibrationPoints[0].y);
-            this.leftCtx.lineTo(this.calibrationPoints[1].x, this.calibrationPoints[1].y);
+            this.leftCtx.arc(canvasPoint.x, canvasPoint.y, 5, 0, 2 * Math.PI);
+            this.leftCtx.fill();
+
+            this.leftCtx.fillText(`P${index + 1}`, canvasPoint.x + 10, canvasPoint.y - 10);
+        });
+
+        // Draw line between points if we have 2
+        if (canvasPoints.length === 2) {
+            this.leftCtx.beginPath();
+            this.leftCtx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+            this.leftCtx.lineTo(canvasPoints[1].x, canvasPoints[1].y);
             this.leftCtx.stroke();
         }
     }
@@ -613,9 +856,7 @@ class ImageAnalysisApp {
 
     enableControls() {
         const buttons = [
-            'calibrateBtn', 'autoDetectBtn', 'rectangleToolBtn',
-            'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
-            'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
+            'calibrateBtn', 'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
             'rotateLeftBtn', 'rotateRightBtn',
             'exportDataBtn', 'exportImageBtn'
         ];
@@ -623,6 +864,9 @@ class ImageAnalysisApp {
         buttons.forEach(id => {
             document.getElementById(id).disabled = false;
         });
+
+        // Enable detection tool dropdown
+        document.getElementById('detectionToolSelect').disabled = false;
     }
 
     // Mouse event handlers
@@ -707,9 +951,20 @@ class ImageAnalysisApp {
 
     addCalibrationPoint(x, y) {
         if (this.calibrationPoints.length < 2) {
-            this.calibrationPoints.push({ x, y });
-            this.drawImage();
-            
+            // Convert canvas coordinates to image coordinates (rotation-aware)
+            const imageCoords = this.canvasToImageCoords(x, y);
+
+            console.log(`📏 Calibration point ${this.calibrationPoints.length + 1}: Canvas (${x}, ${y}) → Image (${imageCoords.x.toFixed(1)}, ${imageCoords.y.toFixed(1)})`);
+
+            this.calibrationPoints.push({
+                x: imageCoords.x,
+                y: imageCoords.y,
+                canvasX: x,  // Store original canvas coords for display
+                canvasY: y
+            });
+
+            this.drawBothCanvases();
+
             if (this.calibrationPoints.length === 2) {
                 document.getElementById('calibrationInput').style.display = 'block';
                 document.getElementById('canvasInstructions').textContent = 'Enter the real measurement';
@@ -768,13 +1023,11 @@ class ImageAnalysisApp {
     // Tool methods
     setTool(tool) {
         this.currentTool = tool;
-        
-        // Update button states
-        document.querySelectorAll('.btn-tool').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.getElementById(tool + 'ToolBtn').classList.add('active');
-        
+
+        // Update dropdown selection
+        const dropdown = document.getElementById('detectionToolSelect');
+        dropdown.value = tool;
+
         document.getElementById('canvasInstructions').textContent = `${tool.charAt(0).toUpperCase() + tool.slice(1)} tool selected`;
     }
 
@@ -873,8 +1126,6 @@ class ImageAnalysisApp {
                         <div class="measurement-breakdown">
                             <p><strong>Length:</strong> ${lengthBreakdown} mm</p>
                             <p><strong>Width:</strong> ${widthBreakdown} mm</p>
-                            <p><strong>Area:</strong> ${area.toFixed(2)} mm²</p>
-                            <p><strong>Perimeter:</strong> ${this.calculateShapePerimeter(shape).toFixed(2)} mm</p>
                         </div>
                     </div>
                 </div>
@@ -1328,9 +1579,7 @@ class ImageAnalysisApp {
 
             // Disable controls
             const buttons = [
-                'calibrateBtn', 'autoDetectBtn', 'rectangleToolBtn',
-                'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
-                'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
+                'calibrateBtn', 'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
                 'rotateLeftBtn', 'rotateRightBtn',
                 'exportDataBtn', 'exportImageBtn'
             ];
@@ -1339,52 +1588,99 @@ class ImageAnalysisApp {
                 document.getElementById(id).disabled = true;
             });
 
+            // Disable detection tool dropdown
+            document.getElementById('detectionToolSelect').disabled = true;
+
             console.log('New project started');
         }
     }
 
-    // Image Rotation Method
+    // Image Rotation Method - Shapes stick to image like stickers
     rotateImage(degrees) {
         if (!this.originalImage) return;
 
         this.rotation = (this.rotation + degrees) % 360;
         if (this.rotation < 0) this.rotation += 360;
 
-        // Create rotated image
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        console.log(`🔄 Rotating view ${degrees}° - Total rotation: ${this.rotation}°`);
+        console.log(`📍 Shapes stored in image coordinates - they stick like stickers`);
 
-        // Calculate new dimensions for rotated image
-        const angle = (this.rotation * Math.PI) / 180;
-        const cos = Math.abs(Math.cos(angle));
-        const sin = Math.abs(Math.sin(angle));
-
-        const newWidth = this.originalImage.width * cos + this.originalImage.height * sin;
-        const newHeight = this.originalImage.width * sin + this.originalImage.height * cos;
-
-        canvas.width = newWidth;
-        canvas.height = newHeight;
-
-        // Draw rotated image
-        ctx.translate(newWidth / 2, newHeight / 2);
-        ctx.rotate(angle);
-        ctx.drawImage(
-            this.originalImage,
-            -this.originalImage.width / 2,
-            -this.originalImage.height / 2
-        );
-
-        // Create new image from rotated canvas
-        const rotatedImg = new Image();
-        rotatedImg.onload = () => {
-            this.image = rotatedImg;
-            this.drawImage();
-            this.updateImageInfo();
-        };
-        rotatedImg.src = canvas.toDataURL();
-
-        console.log(`Image rotated to ${this.rotation}°`);
+        // Shapes are stored in image coordinates, so they automatically stick to image
+        // Just redraw with new rotation
+        this.drawBothCanvases();
     }
+
+    // Convert canvas coordinates to image coordinates (for storing shapes)
+    canvasToImageCoords(canvasX, canvasY) {
+        if (!this.originalImage) return { x: canvasX, y: canvasY };
+
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return { x: canvasX, y: canvasY };
+
+        // The click is on the rotated canvas, but we need to find where it would be
+        // in the original (non-rotated) image coordinates
+
+        // First, get the image center in canvas coordinates
+        const imageCenterX = imageInfo.x + imageInfo.width / 2;
+        const imageCenterY = imageInfo.y + imageInfo.height / 2;
+
+        // Convert click to relative coordinates from image center
+        let relativeX = canvasX - imageCenterX;
+        let relativeY = canvasY - imageCenterY;
+
+        // Reverse the rotation to get the position in the original image space
+        const angle = (-this.rotation * Math.PI) / 180; // Negative to reverse rotation
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        const unrotatedX = relativeX * cos - relativeY * sin;
+        const unrotatedY = relativeX * sin + relativeY * cos;
+
+        // Convert from scaled canvas coordinates to original image coordinates
+        const imageX = ((unrotatedX + imageInfo.width / 2) / imageInfo.width) * this.originalImage.width;
+        const imageY = ((unrotatedY + imageInfo.height / 2) / imageInfo.height) * this.originalImage.height;
+
+        console.log(`🖱️ Click (${canvasX}, ${canvasY}) → Image (${imageX.toFixed(1)}, ${imageY.toFixed(1)}) [Rotation: ${this.rotation}°]`);
+
+        return { x: imageX, y: imageY };
+    }
+
+    // Convert image coordinates to canvas coordinates (for displaying shapes)
+    imageToCanvasCoords(imageX, imageY) {
+        if (!this.originalImage) return { x: imageX, y: imageY };
+
+        const imageInfo = this.getImageDrawInfoLeft();
+        if (!imageInfo) return { x: imageX, y: imageY };
+
+        // Convert from image coordinates to scaled coordinates
+        const scaledX = (imageX / this.originalImage.width) * imageInfo.width;
+        const scaledY = (imageY / this.originalImage.height) * imageInfo.height;
+
+        // Center relative coordinates
+        const relativeX = scaledX - imageInfo.width / 2;
+        const relativeY = scaledY - imageInfo.height / 2;
+
+        // Apply rotation
+        const angle = (this.rotation * Math.PI) / 180;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        const rotatedX = relativeX * cos - relativeY * sin;
+        const rotatedY = relativeX * sin + relativeY * cos;
+
+        // Translate back to canvas coordinates
+        const imageCenterX = imageInfo.x + imageInfo.width / 2;
+        const imageCenterY = imageInfo.y + imageInfo.height / 2;
+
+        return {
+            x: rotatedX + imageCenterX,
+            y: rotatedY + imageCenterY
+        };
+    }
+
+
+
+
 
     // Delete Shape Method
     deleteShape(shapeIndex) {

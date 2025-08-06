@@ -108,12 +108,15 @@
 
                 <div class="panel-section">
                     <h3>Detection Tools</h3>
-                    <div class="tool-buttons">
-                        <button class="btn-tool" id="autoDetectBtn" disabled>Auto Detect Shapes</button>
-                        <button class="btn-tool" id="rectangleToolBtn" disabled>Rectangle Tool</button>
-                        <button class="btn-tool" id="circleToolBtn" disabled>Circle Tool</button>
-                        <button class="btn-tool" id="polygonToolBtn" disabled>Polygon Tool</button>
-                        <button class="btn-tool" id="clearAllBtn" disabled>Clear All</button>
+                    <div class="tool-dropdown-container">
+                        <label for="detectionToolSelect">Select Tool:</label>
+                        <select id="detectionToolSelect" class="tool-dropdown" disabled>
+                            <option value="">Choose a tool...</option>
+                            <option value="autoDetect">Auto Detection</option>
+                            <option value="rectangle">Rectangle</option>
+                            <option value="circle">Circle</option>
+                            <option value="polygon">Polygon</option>
+                        </select>
                     </div>
                 </div>
 

@@ -19,6 +19,20 @@ window.CanvasTools = {
         });
     },
 
+    // Draw shapes without any coordinate transforms (shapes already in canvas coordinates)
+    drawShapesWithoutDimensionsRaw(ctx, shapes) {
+        shapes.forEach((shape, index) => {
+            this.drawShapeRaw(ctx, shape, index + 1);
+        });
+    },
+
+    // Draw shapes with dimensions without any coordinate transforms (shapes already in canvas coordinates)
+    drawShapesWithDimensionsRaw(ctx, shapes, scale = 1) {
+        shapes.forEach((shape, index) => {
+            this.drawShapeWithDimensionsRaw(ctx, shape, index + 1, scale);
+        });
+    },
+
     // Draw shapes with dimensions (for right canvas)
     drawShapesWithDimensions(ctx, shapes, zoom = 1, panX = 0, panY = 0, imageInfo = null) {
         shapes.forEach((shape, index) => {
@@ -396,12 +410,17 @@ window.CanvasTools = {
         ctx.restore();
     },
 
-    // Convert canvas coordinates to image coordinates
+    // Convert canvas coordinates to image coordinates (rotation-aware)
     canvasToImageCoords(canvasX, canvasY, app) {
+        // Use the app's rotation-aware coordinate conversion
+        if (app.canvasToImageCoords) {
+            return app.canvasToImageCoords(canvasX, canvasY);
+        }
+
+        // Fallback to simple conversion (no rotation)
         const imageInfo = app.getImageDrawInfo();
         if (!imageInfo) return { x: canvasX, y: canvasY };
 
-        // Convert from canvas space to image space
         const imageX = (canvasX - imageInfo.x) * (imageInfo.originalWidth / imageInfo.width);
         const imageY = (canvasY - imageInfo.y) * (imageInfo.originalHeight / imageInfo.height);
 
@@ -496,7 +515,12 @@ window.CanvasTools = {
             x: x,
             y: y,
             width: 0,
-            height: 0
+            height: 0,
+            // Store original position for rotation tracking
+            originalX: x,
+            originalY: y,
+            originalWidth: 0,
+            originalHeight: 0
         };
         // Store start point in image coordinates
         this.startPointImage = { x, y };
@@ -523,6 +547,12 @@ window.CanvasTools = {
             this.currentShape.y = this.startPointImage.y;
         }
 
+        // Update original dimensions for rotation tracking
+        this.currentShape.originalX = this.currentShape.x;
+        this.currentShape.originalY = this.currentShape.y;
+        this.currentShape.originalWidth = this.currentShape.width;
+        this.currentShape.originalHeight = this.currentShape.height;
+
         app.drawBothCanvases();
         this.drawShapeWithoutDimensions(app.leftCtx, this.currentShape, null, app.zoom, app.panX, app.panY, app.getImageDrawInfoLeft());
 
@@ -536,7 +566,11 @@ window.CanvasTools = {
             type: 'circle',
             centerX: x,
             centerY: y,
-            radius: 0
+            radius: 0,
+            // Store original position for rotation tracking
+            originalCenterX: x,
+            originalCenterY: y,
+            originalRadius: 0
         };
         // Store start point in image coordinates
         this.startPointImage = { x, y };
@@ -548,6 +582,11 @@ window.CanvasTools = {
         const dx = x - this.currentShape.centerX;
         const dy = y - this.currentShape.centerY;
         this.currentShape.radius = Math.sqrt(dx * dx + dy * dy);
+
+        // Update original dimensions for rotation tracking
+        this.currentShape.originalCenterX = this.currentShape.centerX;
+        this.currentShape.originalCenterY = this.currentShape.centerY;
+        this.currentShape.originalRadius = this.currentShape.radius;
 
         app.drawBothCanvases();
         this.drawShapeWithoutDimensions(app.leftCtx, this.currentShape, null, app.zoom, app.panX, app.panY, app.getImageDrawInfoLeft());
@@ -750,5 +789,120 @@ window.CanvasTools = {
             }
         }
         return -1;
+    },
+
+    // Draw shape without any coordinate transforms (shape already in canvas coordinates)
+    drawShapeRaw(ctx, shape, shapeNumber) {
+        ctx.save();
+
+        // Set basic style
+        ctx.strokeStyle = shape.color || '#00ff00';
+        ctx.lineWidth = shape.lineWidth || 2;
+        ctx.fillStyle = 'transparent';
+
+        switch (shape.type) {
+            case 'rectangle':
+                ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+                break;
+
+            case 'circle':
+                ctx.beginPath();
+                ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
+                ctx.stroke();
+                break;
+
+            case 'polygon':
+            case 'detected-contour':
+                if (shape.points && shape.points.length > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(shape.points[0].x, shape.points[0].y);
+                    for (let i = 1; i < shape.points.length; i++) {
+                        ctx.lineTo(shape.points[i].x, shape.points[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                break;
+        }
+
+        ctx.restore();
+    },
+
+    // Draw shape with dimensions without any coordinate transforms (shape already in canvas coordinates)
+    drawShapeWithDimensionsRaw(ctx, shape, shapeNumber, scale = 1) {
+        ctx.save();
+
+        // Set style for dimensions view (red color)
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = shape.lineWidth || 2;
+        ctx.fillStyle = 'transparent';
+        ctx.font = '12px Arial';
+        ctx.fillStyle = '#ffffff';
+
+        switch (shape.type) {
+            case 'rectangle':
+                // Draw rectangle
+                ctx.strokeStyle = '#ff0000';
+                ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+
+                // Calculate real dimensions
+                const realWidth = shape.width * scale;
+                const realHeight = shape.height * scale;
+
+                // Draw dimensions
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${realWidth.toFixed(1)}mm`, shape.x + shape.width/2 - 20, shape.y - 5);
+                ctx.fillText(`${realHeight.toFixed(1)}mm`, shape.x - 40, shape.y + shape.height/2);
+                break;
+
+            case 'circle':
+                // Draw circle
+                ctx.strokeStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
+                ctx.stroke();
+
+                // Calculate real radius
+                const realRadius = shape.radius * scale;
+                const realDiameter = realRadius * 2;
+
+                // Draw dimensions
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`⌀${realDiameter.toFixed(1)}mm`, shape.centerX + shape.radius + 5, shape.centerY);
+                break;
+
+            case 'polygon':
+            case 'detected-contour':
+                if (shape.points && shape.points.length > 0) {
+                    // Draw polygon
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(shape.points[0].x, shape.points[0].y);
+                    for (let i = 1; i < shape.points.length; i++) {
+                        ctx.lineTo(shape.points[i].x, shape.points[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+
+                    // Calculate area (simplified)
+                    let area = 0;
+                    for (let i = 0; i < shape.points.length; i++) {
+                        const j = (i + 1) % shape.points.length;
+                        area += shape.points[i].x * shape.points[j].y;
+                        area -= shape.points[j].x * shape.points[i].y;
+                    }
+                    area = Math.abs(area) / 2;
+                    const realArea = area * scale * scale;
+
+                    // Draw area
+                    ctx.fillStyle = '#ffffff';
+                    const centerX = shape.points.reduce((sum, p) => sum + p.x, 0) / shape.points.length;
+                    const centerY = shape.points.reduce((sum, p) => sum + p.y, 0) / shape.points.length;
+                    ctx.fillText(`${realArea.toFixed(1)}mm²`, centerX, centerY);
+                }
+                break;
+        }
+
+        ctx.restore();
     }
 };

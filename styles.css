@@ -450,6 +450,54 @@ input[type="number"]:focus, input[type="text"]:focus {
     border-color: #007acc;
 }
 
+/* Tool Dropdown */
+.tool-dropdown-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tool-dropdown-container label {
+    color: #cccccc;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.tool-dropdown {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #3e3e42;
+    background: #2d2d30;
+    color: #cccccc;
+    font-size: 11px;
+    font-family: inherit;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tool-dropdown:hover:not(:disabled) {
+    border-color: #007acc;
+    background: #3e3e42;
+}
+
+.tool-dropdown:focus {
+    outline: none;
+    border-color: #007acc;
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.tool-dropdown:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tool-dropdown option {
+    background: #2d2d30;
+    color: #cccccc;
+    padding: 4px;
+}
+
 /* Calibration Controls */
 .calibration-input {
     background: #2d2d30;
