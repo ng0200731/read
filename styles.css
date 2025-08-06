@@ -548,15 +548,7 @@ input[type="number"]:focus, input[type="text"]:focus {
     color: #cccccc;
 }
 
-/* Cost Display */
-.total-cost {
-    margin-top: 8px;
-    padding: 12px;
-    background: #0e4f1f;
-    border: 1px solid #14892c;
-    font-size: 11px;
-    color: #4ec9b0;
-}
+
 
 /* Detail View Modal */
 .detail-view-modal {

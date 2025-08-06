@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.4.2";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -147,11 +147,6 @@ class ImageAnalysisApp {
 
         document.getElementById('resetZoomBtn').addEventListener('click', () => {
             this.resetZoom();
-        });
-
-        // Cost calculation
-        document.getElementById('calculateCostBtn').addEventListener('click', () => {
-            this.calculateTotalCost();
         });
 
         // Export
@@ -669,7 +664,7 @@ class ImageAnalysisApp {
             'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
             'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
             'rotateLeftBtn', 'rotateRightBtn',
-            'calculateCostBtn', 'exportDataBtn', 'exportImageBtn'
+            'exportDataBtn', 'exportImageBtn'
         ];
 
         buttons.forEach(id => {
@@ -1254,26 +1249,7 @@ class ImageAnalysisApp {
         return 0;
     }
 
-    calculateTotalCost() {
-        const costPerSqMm = parseFloat(document.getElementById('costPerSqMm').value);
-        if (!costPerSqMm || costPerSqMm <= 0) {
-            alert('Please enter a valid cost per square mm');
-            return;
-        }
 
-        let totalArea = 0;
-        this.shapes.forEach(shape => {
-            totalArea += this.calculateShapeArea(shape);
-        });
-
-        const totalCost = totalArea * costPerSqMm;
-        
-        document.getElementById('totalCost').innerHTML = `
-            <strong>Total Area:</strong> ${totalArea.toFixed(2)} mm²<br>
-            <strong>Cost per mm²:</strong> $${costPerSqMm.toFixed(3)}<br>
-            <strong>Total Cost:</strong> $${totalCost.toFixed(2)}
-        `;
-    }
 
     // Export methods
     exportData() {
@@ -1403,7 +1379,7 @@ class ImageAnalysisApp {
                 'circleToolBtn', 'polygonToolBtn', 'clearAllBtn',
                 'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
                 'rotateLeftBtn', 'rotateRightBtn',
-                'calculateCostBtn', 'exportDataBtn', 'exportImageBtn'
+                'exportDataBtn', 'exportImageBtn'
             ];
 
             buttons.forEach(id => {
