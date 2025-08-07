@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.4";
+const APP_VERSION = "2.0.5";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -370,7 +370,7 @@ class ImageAnalysisApp {
         // Create hidden file input for canvas upload
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
-        fileInput.accept = 'image/jpeg,image/jpg,image/gif';
+        fileInput.accept = 'image/jpeg,image/jpg,image/gif,image/png';
         fileInput.style.display = 'none';
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
@@ -585,10 +585,10 @@ class ImageAnalysisApp {
             console.log('✅ User confirmed - proceeding with new image');
         }
 
-        // Validate file type - only JPG and GIF allowed
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/gif'];
+        // Validate file type - only JPG, GIF, and PNG allowed
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/gif', 'image/png'];
         if (!allowedTypes.includes(file.type.toLowerCase())) {
-            alert('Please select a JPG or GIF image file only.\nSelected file type: ' + file.type);
+            alert('Please select a JPG, GIF, or PNG image file only.\nSelected file type: ' + file.type);
             console.log('❌ Invalid file type:', file.type);
             return;
         }

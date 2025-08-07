@@ -1,6 +1,30 @@
 # Image Pattern Analysis Tool - Version History
 
-## Version 2.0.4 (Current)
+## Version 2.0.5 (Current)
+**Release Date:** 2025-08-07
+
+### ✨ **New Feature**
+- **PNG format support**: Added PNG image format support alongside JPG and GIF
+- **File validation**: Updated to accept image/png MIME type
+- **User interface**: Updated text to show "JPG/GIF/PNG" support
+- **File input**: Updated accept attribute to include PNG files
+
+### 📋 **Updated Components**
+- **File type validation**: Now accepts JPG, GIF, and PNG formats
+- **Error messages**: Updated to mention PNG support
+- **UI text**: Canvas instructions now show PNG support
+- **File input**: Accept attribute includes image/png
+
+### 📋 **Augment Rule Compliance**
+- **Version tracking**: Updated to v2.0.3 after bug fix
+- **Documentation**: Comprehensive version history maintained
+- **File management**: Following Augment standards for version control
+
+---
+
+---
+
+## Version 2.0.4 (Previous)
 **Release Date:** 2025-08-07
 
 ### 🔧 **Critical Bug Fix**
@@ -13,13 +37,6 @@
 - **Reset prompt**: Now properly triggers when dragging new image over existing image
 - **Universal coverage**: Works for both overlay (no image) and canvas (image loaded)
 - **User control**: Always prompts before replacing existing image
-
-### 📋 **Augment Rule Compliance**
-- **Version tracking**: Updated to v2.0.3 after bug fix
-- **Documentation**: Comprehensive version history maintained
-- **File management**: Following Augment standards for version control
-
----
 
 ---
 
@@ -83,7 +100,7 @@
 - `image-processor.js` - Image processing utilities
 
 ### **Supported Formats**
-- **Images**: JPG, GIF only
+- **Images**: JPG, GIF, PNG
 - **Max Size**: 10MB
 - **Upload Methods**: Drag & drop, clipboard paste, file browser
 
