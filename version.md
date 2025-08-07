@@ -1,6 +1,42 @@
 # Image Pattern Analysis Tool - Version History
 
-## Version 2.0.5 (Current)
+## Version 2.1.0 (Current)
+**Release Date:** 2025-08-07
+
+### ✨ **New Feature**
+- **Editing info bar**: Blue instruction bar appears under "Image View" header during editing
+- **Clear editing instructions**: Shows "🔧 EDIT: Drag squares │ ENTER=Save │ ESC=Cancel"
+- **Contextual display**: Only visible when editing mode is active
+- **Consistent styling**: Matches existing blue UI theme
+
+### 🎨 **UI Enhancement**
+- **Better user guidance**: Clear instructions always visible during editing
+- **Professional appearance**: Clean blue bar with monospace font
+- **Non-intrusive design**: Appears only when needed, disappears when editing ends
+
+---
+
+## Version 2.0.9 (Previous)
+**Release Date:** 2025-08-07
+
+### ✨ **New Feature**
+- **Editing status in results panel**: Rectangle entries now show "(editing...)" when being edited
+- **Real-time status updates**: Results panel immediately reflects when a rectangle enters/exits edit mode
+- **Enhanced user feedback**: Clear visual indication of which rectangle is currently being modified
+
+### 🔧 **Technical Implementation**
+- **Dynamic title generation**: Rectangle titles change based on editing state
+- **Automatic updates**: Results panel refreshes when editing starts, finishes, or is cancelled
+- **State tracking**: Uses existing `isEditingShape` and `editingShapeIndex` properties
+
+### 📋 **User Experience**
+- **Double-click rectangle**: Entry changes to "Rectangle X (editing...)"
+- **Finish editing (Enter)**: Entry returns to "Rectangle X" with updated measurements
+- **Cancel editing (Escape)**: Entry returns to "Rectangle X" with original measurements
+
+---
+
+## Version 2.0.5 (Previous)
 **Release Date:** 2025-08-07
 
 ### ✨ **New Feature**

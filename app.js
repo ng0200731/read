@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.7";
+const APP_VERSION = "2.1.0";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -1370,7 +1370,10 @@ class ImageAnalysisApp {
         deleteAllBtn.style.display = 'inline-block';
 
         let html = '';
-        this.shapes.forEach((shape, index) => {
+        // Display shapes in reverse order (newest first) but keep original numbering
+        for (let i = this.shapes.length - 1; i >= 0; i--) {
+            const shape = this.shapes[i];
+            const index = i;
             const area = this.calculateShapeArea(shape);
             const details = this.calculateDetailedMeasurements(shape);
             const shapeClass = shape.type.replace('-', '');
@@ -1395,11 +1398,17 @@ class ImageAnalysisApp {
                 details.widths.map(w => w.toFixed(1)).join(' + ') + ' = ' + details.widths.reduce((sum, w) => sum + w, 0).toFixed(1) :
                 '0';
 
+            // Check if this shape is currently being edited
+            const isCurrentlyEditing = this.isEditingShape && this.editingShapeIndex === index;
+            const shapeTitle = isCurrentlyEditing ?
+                `${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)} (editing...)` :
+                `${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}`;
+
             html += `
                 <div class="result-item ${shapeClass}" data-shape-index="${index}" ondblclick="window.app.startEditingShape(${index})" title="Double-click to edit">
                     <div class="result-header">
                         <span class="shape-number" style="background-color: ${shapeColor};">${shapeNumber}</span>
-                        <h4>${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}</h4>
+                        <h4>${shapeTitle}</h4>
                         <button class="delete-shape-btn" data-shape-index="${index}" title="Delete this shape">🗑️</button>
                     </div>
                     <div class="result-details">
@@ -1410,7 +1419,7 @@ class ImageAnalysisApp {
                     </div>
                 </div>
             `;
-        });
+        }
 
         // Add summary calculations
         if (this.shapes.length > 0) {
@@ -1983,6 +1992,15 @@ class ImageAnalysisApp {
         // Generate editing handles
         this.generateEditingHandles();
 
+        // Show editing indicator
+        this.showEditingIndicator(true, shapeIndex + 1);
+
+        // Show editing info bar
+        this.showEditingInfoBar(true);
+
+        // Update results to show "(editing...)" status
+        this.updateResults();
+
         // Redraw with editing handles
         this.drawBothCanvases();
     }
@@ -2037,6 +2055,25 @@ class ImageAnalysisApp {
         console.log('Handle positions:', this.editingHandles.map(h => `${h.position}: (${h.x.toFixed(1)}, ${h.y.toFixed(1)})`));
     }
 
+    showEditingIndicator(show, shapeNumber = null) {
+        const indicator = document.getElementById('editingIndicator');
+        if (indicator) {
+            if (show && shapeNumber) {
+                indicator.style.display = 'block';
+                indicator.querySelector('.editing-text').textContent = `✏️ Editing Rectangle ${shapeNumber}...`;
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+    }
+
+    showEditingInfoBar(show) {
+        const infoBar = document.getElementById('editingInfoBar');
+        if (infoBar) {
+            infoBar.style.display = show ? 'block' : 'none';
+        }
+    }
+
     cancelShapeEditing() {
         if (!this.isEditingShape) return;
 
@@ -2054,6 +2091,10 @@ class ImageAnalysisApp {
         this.originalShape = null;
         this.editingHandles = [];
         this.dragHandle = null;
+
+        // Hide editing indicator and info bar
+        this.showEditingIndicator(false);
+        this.showEditingInfoBar(false);
 
         // Redraw
         this.drawBothCanvases();
@@ -2074,6 +2115,10 @@ class ImageAnalysisApp {
         this.originalShape = null;
         this.editingHandles = [];
         this.dragHandle = null;
+
+        // Hide editing indicator and info bar
+        this.showEditingIndicator(false);
+        this.showEditingInfoBar(false);
 
         // Redraw and update results
         this.drawBothCanvases();
@@ -2274,23 +2319,29 @@ class ImageAnalysisApp {
             console.log(`Handle ${index}: ${handle.position} at (${handle.x.toFixed(1)}, ${handle.y.toFixed(1)}) ${isActive ? '[ACTIVE]' : ''}`);
         });
 
-        // Draw editing instructions with better visibility
+        // Draw editing instructions in top-right corner
+        const instructionWidth = 250;
+        const instructionHeight = 70;
+        const margin = 10;
+        const x = this.leftCanvas.width - instructionWidth - margin;
+        const y = margin;
+
         this.leftCtx.fillStyle = 'rgba(0, 120, 215, 0.9)'; // Blue background
-        this.leftCtx.fillRect(10, 10, 250, 70);
+        this.leftCtx.fillRect(x, y, instructionWidth, instructionHeight);
 
         // White border
         this.leftCtx.strokeStyle = '#ffffff';
         this.leftCtx.lineWidth = 2;
-        this.leftCtx.strokeRect(10, 10, 250, 70);
+        this.leftCtx.strokeRect(x, y, instructionWidth, instructionHeight);
 
         this.leftCtx.fillStyle = '#ffffff';
         this.leftCtx.font = 'bold 14px Arial';
-        this.leftCtx.fillText('🔧 EDITING MODE', 15, 30);
+        this.leftCtx.fillText('🔧 EDITING MODE', x + 5, y + 20);
 
         this.leftCtx.font = '12px Arial';
-        this.leftCtx.fillText('• Drag white squares to resize', 15, 45);
-        this.leftCtx.fillText('• Press ENTER to confirm size', 15, 58);
-        this.leftCtx.fillText('• Press ESC to cancel changes', 15, 71);
+        this.leftCtx.fillText('• Drag white squares to resize', x + 5, y + 35);
+        this.leftCtx.fillText('• Press ENTER to confirm size', x + 5, y + 48);
+        this.leftCtx.fillText('• Press ESC to cancel changes', x + 5, y + 61);
 
         this.leftCtx.restore();
     }

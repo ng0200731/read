@@ -8,7 +8,7 @@ echo Starting web server...
 echo.
 
 REM Check if Python is available
-python --version >nul 2>&1
+py --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH
     echo Please install Python and try again
@@ -42,7 +42,7 @@ echo.
 
 REM Start server and open browser
 start "" "http://localhost:3000"
-python -m http.server 3000
+py -m http.server 3000
 
 REM If we get here, server stopped
 echo.

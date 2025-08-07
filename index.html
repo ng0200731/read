@@ -20,7 +20,7 @@
                 </div>
                 <div class="version-info">
                     <span class="version-label">Version</span>
-                    <span class="version-number" id="versionNumber">2.0.7</span>
+                    <span class="version-number" id="versionNumber">2.1.0</span>
                 </div>
             </div>
         </header>
@@ -37,6 +37,9 @@
                         <div class="canvas-header">
                             <h4>Image View</h4>
                             <small>Draw rectangles here</small>
+                        </div>
+                        <div class="editing-info-bar" id="editingInfoBar" style="display: none;">
+                            <span class="editing-info-text">🔧 EDIT: Drag squares │ ENTER=Save │ ESC=Cancel</span>
                         </div>
                         <div class="canvas-container">
                             <canvas id="leftCanvas"></canvas>
@@ -67,6 +70,9 @@
                         <div class="canvas-header">
                             <h4>Dimensions View</h4>
                             <small>Clean view with measurements</small>
+                            <div class="editing-indicator" id="editingIndicator" style="display: none;">
+                                <span class="editing-text">✏️ Editing Rectangle...</span>
+                            </div>
                         </div>
                         <div class="canvas-container">
                             <canvas id="rightCanvas"></canvas>
