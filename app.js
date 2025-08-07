@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.5";
+const APP_VERSION = "2.0.6";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -33,6 +33,7 @@ class ImageAnalysisApp {
         this.originalShape = null;
         this.editingHandles = [];
         this.dragHandle = null;
+        this.isRegeneratingHandles = false;
 
         this.init();
     }
@@ -670,6 +671,14 @@ class ImageAnalysisApp {
     drawBothCanvases() {
         this.drawLeftCanvas();
         this.drawRightCanvas();
+
+        // Regenerate editing handles if in editing mode to follow image transforms
+        // But avoid recursion during handle regeneration
+        if (this.isEditingShape && !this.isRegeneratingHandles) {
+            this.isRegeneratingHandles = true;
+            this.generateEditingHandles();
+            this.isRegeneratingHandles = false;
+        }
     }
 
     // Draw left canvas (image + rectangles without dimensions) with rotation
