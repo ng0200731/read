@@ -4,7 +4,7 @@ color 0A
 
 echo ========================================
 echo  IMAGE PATTERN ANALYSIS TOOL
-echo  VERSION 2.0.1
+echo  VERSION 2.0.4
 echo ========================================
 echo.
 

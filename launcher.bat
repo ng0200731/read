@@ -6,7 +6,7 @@ color 0B
 cls
 echo ========================================
 echo  IMAGE PATTERN ANALYSIS TOOL
-echo  VERSION 2.0.1 - LAUNCHER
+echo  VERSION 2.0.4 - LAUNCHER
 echo ========================================
 echo.
 echo  Choose an option:

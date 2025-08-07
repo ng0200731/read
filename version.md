@@ -1,6 +1,41 @@
 # Image Pattern Analysis Tool - Version History
 
-## Version 2.0.1 (Current)
+## Version 2.0.4 (Current)
+**Release Date:** 2025-08-07
+
+### 🔧 **Critical Bug Fix**
+- **Fixed drag and drop on loaded canvas**: Added drag handlers to actual canvas element
+- **Root cause**: Overlay was hidden when image loaded, preventing drag events
+- **Solution**: Added `setupCanvasDragDrop()` method for canvas drag handling
+- **Visual feedback**: Blue dashed border when dragging over loaded image
+
+### ✅ **Confirmed Working**
+- **Reset prompt**: Now properly triggers when dragging new image over existing image
+- **Universal coverage**: Works for both overlay (no image) and canvas (image loaded)
+- **User control**: Always prompts before replacing existing image
+
+### 📋 **Augment Rule Compliance**
+- **Version tracking**: Updated to v2.0.3 after bug fix
+- **Documentation**: Comprehensive version history maintained
+- **File management**: Following Augment standards for version control
+
+---
+
+---
+
+## Version 2.0.2 (Previous)
+**Release Date:** 2025-08-07
+
+### ✅ **Confirmed Features**
+- **Reset prompt functionality**: Confirmed working when dragging new image with existing work
+- **Smart detection**: Automatically detects shapes, calibration, and scale settings
+- **Detailed confirmation dialog**: Shows exactly what will be lost (rectangles, calibration, measurements)
+- **User control**: OK to proceed, Cancel to keep current work
+- **Multi-method support**: Works for drag & drop, click browse, and Ctrl+V paste
+
+---
+
+## Version 2.0.1 (Previous)
 **Release Date:** 2025-08-07
 
 ### 🔧 **Bug Fixes**

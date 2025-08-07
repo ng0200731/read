@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.4";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -387,7 +387,47 @@ class ImageAnalysisApp {
         // Setup clipboard support
         this.setupClipboardSupport();
 
+        // Setup drag and drop on the actual canvas for when image is loaded
+        this.setupCanvasDragDrop();
+
         console.log('✅ Canvas upload setup complete');
+    }
+
+    setupCanvasDragDrop() {
+        // Add drag and drop to the actual left canvas for when image is loaded
+        this.leftCanvas.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.image) {
+                this.leftCanvas.style.border = '3px dashed #007bff';
+            }
+        });
+
+        this.leftCanvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.image) {
+                this.leftCanvas.style.border = '3px dashed #007bff';
+            }
+        });
+
+        this.leftCanvas.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.leftCanvas.style.border = '';
+        });
+
+        this.leftCanvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.leftCanvas.style.border = '';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                console.log('📁 Processing dropped file on loaded canvas:', files[0].name);
+                this.handleFileSelect(files[0]);
+            }
+        });
     }
 
     showCanvasDragIndicator(show) {
@@ -509,31 +549,40 @@ class ImageAnalysisApp {
             return;
         }
 
-        // Check if there's already an image loaded with settings
-        if (this.image && (this.shapes.length > 0 || this.scale !== 1 || this.isCalibrated)) {
+        // Check if there's already an image loaded
+        if (this.image) {
             const hasShapes = this.shapes.length > 0;
             const hasCalibration = this.isCalibrated;
-            const hasSettings = hasShapes || hasCalibration;
+            const hasScaleChanges = this.scale !== 1;
+            const hasSettings = hasShapes || hasCalibration || hasScaleChanges;
+
+            let message = 'Loading a new image will replace the current image';
 
             if (hasSettings) {
-                let message = 'Loading a new image will delete all present settings:\n\n';
+                message = 'Loading a new image will delete all present settings:\n\n';
                 if (hasShapes) {
                     message += `• ${this.shapes.length} rectangle(s) will be deleted\n`;
                 }
                 if (hasCalibration) {
                     message += '• Calibration settings will be reset\n';
                 }
-                message += '• All measurements will be cleared\n\n';
-                message += 'Do you want to continue?';
-
-                const confirmed = confirm(message);
-                if (!confirmed) {
-                    console.log('🚫 User cancelled image loading');
-                    return;
+                if (hasScaleChanges) {
+                    message += '• Scale settings will be reset\n';
                 }
-
-                console.log('✅ User confirmed - clearing all settings');
+                message += '• All measurements will be cleared\n\n';
+            } else {
+                message += '.\n\n';
             }
+
+            message += 'Do you want to continue?';
+
+            const confirmed = confirm(message);
+            if (!confirmed) {
+                console.log('🚫 User cancelled image loading');
+                return;
+            }
+
+            console.log('✅ User confirmed - proceeding with new image');
         }
 
         // Validate file type - only JPG and GIF allowed
