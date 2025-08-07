@@ -1,33 +1,24 @@
 # Image Pattern Analysis Tool - Version History
 
-## Version 1.3.2 (Current)
-**Release Date:** 2025-08-06
+## Version 2.0.1 (Current)
+**Release Date:** 2025-08-07
 
-### 🆕 **New Features**
-- **Dual Upload System**: Added robust upload functionality to Image View canvas area
-- **Canvas Upload Support**: Large Image View area now supports drag/drop, click to browse, and Ctrl+V paste
-- **Unified Upload Experience**: Both "1. UPLOAD IMAGE" section and Image View canvas have identical functionality
+### 🔧 **Bug Fixes**
+- **Fixed blue resize handles visibility** in rotated images
+- **Fixed coordinate system mismatch** between handle generation and drawing
+- **Enhanced debugging** with detailed console logging for handle interactions
 
-### 🔧 **Upload System Improvements**
-- **Unified upload validation**: All methods (drag/drop, paste, browse) use same validation across both upload areas
-- **File type restriction**: Only JPG and GIF files allowed
-- **Size limit**: Maximum 10MB file size
-- **Enhanced error messages**: Clear feedback showing file type and size when validation fails
-
-### 🎨 **Visual Enhancements**
-- **Canvas drag feedback**: Blue glow and scale effect when dragging over Image View canvas
-- **Enhanced instructions**: Clear upload instructions with file format and size limits
-- **Drag indicators**: Visual feedback showing "Drop JPG/GIF here!" during drag operations
-- **Smooth transitions**: 0.2s ease animations for both upload areas
-
-### 🐛 **Bug Fixes**
-- **Script loading order**: Fixed dependency loading sequence
-- **Drag & drop reliability**: Improved event handling to prevent issues
+### ✨ **New Features**
+- **Visual feedback for active handles**: Active handles show yellow with red border
+- **Smart resize cursors**: Directional cursors (↖️↗️↙️↘️⬆️⬇️⬅️➡️) based on handle position
+- **Cursor pointer feedback**: Pointer cursor when hovering over handles
+- **Enhanced handle interaction**: Better visual and cursor feedback during resize operations
 
 ### 📍 **Version Display**
-- **Web interface**: Version 1.3.2 shown in top-right header
+- **Web interface**: Version 2.0.1 shown in top-right header
 - **Browser title**: Dynamic version in page title
 - **Console logging**: Version info displayed on app initialization
+- **Batch files**: DOS mode shows version 2.0.1 in all launchers
 
 ---
 

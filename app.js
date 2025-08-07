@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -1064,17 +1064,33 @@ class ImageAnalysisApp {
             return;
         }
 
+        const rect = e.target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         if (this.isEditingShape && this.dragHandle) {
-            const rect = e.target.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
             this.handleEditingMouseMove(x, y);
             return;
         }
 
-        const rect = e.target.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Check if hovering over a handle to change cursor
+        if (this.isEditingShape) {
+            const rotatedMouse = this.convertMouseToRotatedSpace(x, y);
+            let resizeCursor = 'default';
+
+            for (let i = 0; i < this.editingHandles.length; i++) {
+                const handle = this.editingHandles[i];
+                const distance = Math.sqrt(Math.pow(rotatedMouse.x - handle.x, 2) + Math.pow(rotatedMouse.y - handle.y, 2));
+
+                if (distance <= 8) {
+                    // Set appropriate resize cursor based on handle position
+                    resizeCursor = this.getResizeCursor(handle.position);
+                    break;
+                }
+            }
+
+            this.leftCanvas.style.cursor = resizeCursor;
+        }
 
         if (this.currentTool && window.CanvasTools) {
             window.CanvasTools.handleMouseMove(x, y, this.currentTool, this);
@@ -2024,47 +2040,68 @@ class ImageAnalysisApp {
         this.updateResults();
     }
 
+    // Get appropriate resize cursor for handle position
+    getResizeCursor(handlePosition) {
+        // Map handle positions to CSS cursor values
+        const cursorMap = {
+            'top-left': 'nw-resize',
+            'top-right': 'ne-resize',
+            'bottom-left': 'sw-resize',
+            'bottom-right': 'se-resize',
+            'top': 'n-resize',
+            'bottom': 's-resize',
+            'left': 'w-resize',
+            'right': 'e-resize'
+        };
+
+        return cursorMap[handlePosition] || 'default';
+    }
+
     // Convert mouse coordinates to rotated coordinate space (to match handle positions)
     convertMouseToRotatedSpace(mouseX, mouseY) {
         const imageInfo = this.getImageDrawInfoLeft();
         if (!imageInfo) return { x: mouseX, y: mouseY };
 
-        // Get image center in canvas coordinates
-        const imageCenterX = imageInfo.x + imageInfo.width / 2;
-        const imageCenterY = imageInfo.y + imageInfo.height / 2;
+        // Convert mouse coordinates to the same coordinate system as handles
+        // Handles are positioned using imageToCanvasCoordsInRotatedSpace
+        // So we need to convert mouse to that same space
 
-        // Convert mouse to relative coordinates from image center
-        const relativeX = mouseX - imageCenterX;
-        const relativeY = mouseY - imageCenterY;
+        // First convert mouse to image coordinates
+        const imageCoords = this.canvasToImageCoords(mouseX, mouseY);
 
-        // Apply rotation to match the rotated coordinate space
-        const angle = (this.imageRotation * Math.PI) / 180;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
+        // Then convert back to rotated canvas coordinates (same as handles)
+        const rotatedCoords = this.imageToCanvasCoordsInRotatedSpace(imageCoords.x, imageCoords.y, imageInfo);
 
-        const rotatedX = relativeX * cos + relativeY * sin;
-        const rotatedY = -relativeX * sin + relativeY * cos;
-
-        return { x: rotatedX, y: rotatedY };
+        return rotatedCoords;
     }
 
     // Editing mouse handlers
     handleEditingMouseDown(x, y) {
+        console.log(`🖱️ Mouse down at canvas (${x.toFixed(1)}, ${y.toFixed(1)})`);
+
         // Convert mouse coordinates to rotated space to match handle coordinates
         const rotatedMouse = this.convertMouseToRotatedSpace(x, y);
+        console.log(`🔄 Converted to rotated space: (${rotatedMouse.x.toFixed(1)}, ${rotatedMouse.y.toFixed(1)})`);
 
         // Check if clicking on a handle
         for (let i = 0; i < this.editingHandles.length; i++) {
             const handle = this.editingHandles[i];
             const distance = Math.sqrt(Math.pow(rotatedMouse.x - handle.x, 2) + Math.pow(rotatedMouse.y - handle.y, 2));
+            console.log(`📏 Distance to ${handle.position} handle: ${distance.toFixed(1)}px (handle at ${handle.x.toFixed(1)}, ${handle.y.toFixed(1)})`);
 
             if (distance <= 8) { // 8px tolerance
                 this.dragHandle = handle;
                 console.log(`🎯 Started dragging ${handle.type} handle: ${handle.position}`);
+
+                // Set cursor to appropriate resize cursor during drag
+                this.leftCanvas.style.cursor = this.getResizeCursor(handle.position);
+
+                this.drawBothCanvases(); // Redraw to show active handle
                 return;
             }
         }
 
+        console.log('❌ No handle clicked');
         // If not clicking on handle, do nothing (keep editing mode active)
         // User must press ESC to exit editing mode
     }
@@ -2092,6 +2129,9 @@ class ImageAnalysisApp {
         if (this.dragHandle) {
             console.log(`✅ Finished dragging ${this.dragHandle.type} handle`);
             this.dragHandle = null;
+
+            // Reset cursor to default
+            this.leftCanvas.style.cursor = 'default';
 
             // Stay in editing mode - user must press ESC to exit
             // Regenerate handles in case shape changed significantly
@@ -2180,17 +2220,18 @@ class ImageAnalysisApp {
         // Draw handles with better visibility
         this.editingHandles.forEach((handle, index) => {
             const size = handle.type === 'corner' ? 10 : 8; // Make handles bigger
+            const isActive = this.dragHandle && this.dragHandle === handle;
 
-            // Draw white background
-            this.leftCtx.fillStyle = '#ffffff';
+            // Draw background - yellow if active, white if not
+            this.leftCtx.fillStyle = isActive ? '#ffff00' : '#ffffff';
             this.leftCtx.fillRect(handle.x - size/2, handle.y - size/2, size, size);
 
-            // Draw blue border for better visibility
-            this.leftCtx.strokeStyle = '#007acc';
-            this.leftCtx.lineWidth = 2;
+            // Draw border - red if active, blue if not
+            this.leftCtx.strokeStyle = isActive ? '#ff0000' : '#007acc';
+            this.leftCtx.lineWidth = isActive ? 3 : 2;
             this.leftCtx.strokeRect(handle.x - size/2, handle.y - size/2, size, size);
 
-            console.log(`Handle ${index}: ${handle.position} at (${handle.x.toFixed(1)}, ${handle.y.toFixed(1)})`);
+            console.log(`Handle ${index}: ${handle.position} at (${handle.x.toFixed(1)}, ${handle.y.toFixed(1)}) ${isActive ? '[ACTIVE]' : ''}`);
         });
 
         // Draw editing instructions with better visibility
