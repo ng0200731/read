@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.0.6";
+const APP_VERSION = "2.0.7";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -1438,25 +1438,7 @@ class ImageAnalysisApp {
             const areaBreakdown = totalAreas.length > 0 ?
                 totalAreas.map(a => a.toFixed(1)).join(' + ') + ' = ' + areaSum.toFixed(1) : '0';
 
-            html += `
-                <div class="summary-section">
-                    <h3>📊 Total Calculations</h3>
-                    <div class="summary-details">
-                        <div class="summary-item">
-                            <strong>Total Length:</strong><br>
-                            <span class="calculation">${lengthBreakdown} mm</span>
-                        </div>
-                        <div class="summary-item">
-                            <strong>Total Width:</strong><br>
-                            <span class="calculation">${widthBreakdown} mm</span>
-                        </div>
-                        <div class="summary-item">
-                            <strong>Total Area:</strong><br>
-                            <span class="calculation">${areaBreakdown} mm²</span>
-                        </div>
-                    </div>
-                </div>
-            `;
+
         }
 
         resultsArea.innerHTML = html;
