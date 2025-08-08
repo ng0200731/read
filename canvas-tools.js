@@ -846,9 +846,9 @@ window.CanvasTools = {
                 ctx.strokeStyle = '#ff0000';
                 ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
 
-                // Calculate real dimensions
-                const realWidth = shape.width * scale;
-                const realHeight = shape.height * scale;
+                // Calculate real dimensions (scale = pixels per mm)
+                const realWidth = shape.width / scale;
+                const realHeight = shape.height / scale;
 
                 // Draw dimensions
                 ctx.fillStyle = '#ffffff';
@@ -863,8 +863,8 @@ window.CanvasTools = {
                 ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, 2 * Math.PI);
                 ctx.stroke();
 
-                // Calculate real radius
-                const realRadius = shape.radius * scale;
+                // Calculate real radius (scale = pixels per mm)
+                const realRadius = shape.radius / scale;
                 const realDiameter = realRadius * 2;
 
                 // Draw dimensions
@@ -893,7 +893,7 @@ window.CanvasTools = {
                         area -= shape.points[j].x * shape.points[i].y;
                     }
                     area = Math.abs(area) / 2;
-                    const realArea = area * scale * scale;
+                    const realArea = area / (scale * scale);
 
                     // Draw area
                     ctx.fillStyle = '#ffffff';

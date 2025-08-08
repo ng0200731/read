@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.1.2";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -14,7 +14,7 @@ class ImageAnalysisApp {
         this.image = null;
         this.originalImage = null; // Store original for rotation
         this.rotation = 0; // Current rotation in degrees
-        this.scale = 1; // pixels per mm
+        this.scale = 0; // pixels per mm (0 until calibrated)
         this.zoom = 1;
         this.panX = 0;
         this.panY = 0;
@@ -64,6 +64,9 @@ class ImageAnalysisApp {
         // Setup left canvas (image + rectangles without dimensions)
         this.leftCanvas = document.getElementById('leftCanvas');
         this.leftCtx = this.leftCanvas.getContext('2d');
+        // Legacy aliases for features that reference this.canvas/this.ctx
+        this.canvas = this.leftCanvas;
+        this.ctx = this.leftCtx;
 
         // Setup right canvas (rectangles only with dimensions)
         this.rightCanvas = document.getElementById('rightCanvas');
@@ -519,13 +522,14 @@ class ImageAnalysisApp {
 
     async copyImageToClipboard() {
         try {
-            if (!this.canvas || !this.image) {
+            if (!this.rightCanvas && !this.canvas || !this.image) {
                 this.showClipboardFeedback('No image to copy', true);
                 return;
             }
 
-            // Convert canvas to blob
-            this.canvas.toBlob(async (blob) => {
+            // Convert canvas to blob (prefer right canvas for clean dimensions view)
+            const exportCanvas = this.rightCanvas || this.canvas;
+            exportCanvas.toBlob(async (blob) => {
                 try {
                     await navigator.clipboard.write([
                         new ClipboardItem({ 'image/png': blob })
@@ -554,7 +558,7 @@ class ImageAnalysisApp {
         if (this.image) {
             const hasShapes = this.shapes.length > 0;
             const hasCalibration = this.isCalibrated;
-            const hasScaleChanges = this.scale !== 1;
+            const hasScaleChanges = this.scale !== 0;
             const hasSettings = hasShapes || hasCalibration || hasScaleChanges;
 
             let message = 'Loading a new image will replace the current image';
@@ -639,7 +643,7 @@ class ImageAnalysisApp {
         this.shapes = [];
 
         // Reset calibration
-        this.scale = 1;
+        this.scale = 0;
         this.isCalibrated = false;
         this.calibrationPoints = [];
 
@@ -1470,9 +1474,8 @@ class ImageAnalysisApp {
                 this.highlightShape(index, false);
             });
 
-            item.addEventListener('dblclick', () => {
-                this.focusOnShape(index);
-            });
+            // Double-click handled inline in result-item markup to start editing
+            // (Focus behavior removed to prevent unexpected pan/zoom on edit)
 
             item.addEventListener('click', (e) => {
                 // Don't select if clicking on delete button
@@ -1757,7 +1760,8 @@ class ImageAnalysisApp {
     exportImage() {
         const link = document.createElement('a');
         link.download = 'analyzed-image.png';
-        link.href = this.canvas.toDataURL();
+        const exportCanvas = this.rightCanvas || this.canvas;
+        link.href = exportCanvas.toDataURL();
         link.click();
     }
 
@@ -1825,7 +1829,7 @@ class ImageAnalysisApp {
             this.image = null;
             this.originalImage = null;
             this.rotation = 0;
-            this.scale = 1;
+            this.scale = 0;
             this.zoom = 1;
             this.panX = 0;
             this.panY = 0;

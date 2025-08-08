@@ -42,7 +42,7 @@ echo.
 
 REM Start server and open browser
 start "" "http://localhost:3000"
-py -m http.server 3000
+py server.py
 
 REM If we get here, server stopped
 echo.

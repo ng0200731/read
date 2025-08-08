@@ -1,7 +1,7 @@
 # Image Pattern Analysis Tool - Version History
 
-## Version 2.1.0 (Current)
-**Release Date:** 2025-08-07
+## Version 2.1.2 (Current)
+**Release Date:** 2025-08-08
 
 ### ✨ **New Feature**
 - **Editing info bar**: Blue instruction bar appears under "Image View" header during editing
@@ -13,6 +13,14 @@
 - **Better user guidance**: Clear instructions always visible during editing
 - **Professional appearance**: Clean blue bar with monospace font
 - **Non-intrusive design**: Appears only when needed, disappears when editing ends
+
+### 🔧 Fixes
+- Prevent image pan/zoom shift when entering rectangle edit from Results (dblclick only starts edit now)
+- Export operations use right (dimensions) canvas for cleaner output
+- Version consistency across UI, scripts, and cache-busting params
+- Added /health and /healthz endpoints to server
+- start.bat standardized to run server.py
+- PNG mention in drag indicator
 
 ---
 

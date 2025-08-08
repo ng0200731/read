@@ -1,7 +1,7 @@
 @echo off
 cls
 echo ================================================
-echo    IMAGE PATTERN ANALYSIS TOOL v2.0.9
+echo    IMAGE PATTERN ANALYSIS TOOL v2.1.1
 echo ================================================
 echo.
 echo Choose how to start the web server:
@@ -12,6 +12,7 @@ echo 3. Try Python3 (python3)
 echo 4. Open folder to start manually
 echo 5. Exit
 echo.
+:start
 set /p choice="Enter your choice (1-5): "
 
 if "%choice%"=="1" goto python
@@ -78,6 +79,7 @@ echo.
 echo Try another option or install Python first.
 echo.
 pause
+rem Return to menu choice prompt
 goto start
 
 :exit
