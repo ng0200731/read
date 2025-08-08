@@ -3,6 +3,21 @@
 ## Version 2.1.2 (Current)
 **Release Date:** 2025-08-08
 
+## Version 2.1.3 (Current)
+**Release Date:** 2025-08-08
+
+### New
+- Calculation button and modal (left fixed preview, right controls)
+- Loom Type: boardloom, needleloom, shuttle loom
+- Mother Pattern: plain, twill, herringbone
+- Sons list auto-populated from rectangles contained in mother
+- Analysis summarizes mother area and sons count/area
+
+### Notes
+- Analyze runs only when user clicks Analyze
+- Save does not persist to export yet (next step)
+
+
 ### ✨ **New Feature**
 - **Editing info bar**: Blue instruction bar appears under "Image View" header during editing
 - **Clear editing instructions**: Shows "🔧 EDIT: Drag squares │ ENTER=Save │ ESC=Cancel"

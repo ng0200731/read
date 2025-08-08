@@ -20,7 +20,7 @@
                 </div>
                 <div class="version-info">
                     <span class="version-label">Version</span>
-                    <span class="version-number" id="versionNumber">2.1.2</span>
+                    <span class="version-number" id="versionNumber">2.1.3</span>
                 </div>
             </div>
         </header>
@@ -115,6 +115,9 @@
                             <button class="btn-secondary" id="cancelCalibration">Cancel</button>
                         </div>
                         <div class="scale-info" id="scaleInfo"></div>
+                            <div class="calculation-controls">
+                                <button class="btn-primary" id="openCalculationBtn" disabled>Calculation</button>
+                            </div>
                     </div>
                 </div>
 
@@ -172,14 +175,62 @@
                         <canvas id="analyzedDetailCanvas"></canvas>
                     </div>
                 </div>
+    <!-- Calculation Modal -->
+    <div class="detail-view-modal" id="calculationModal" style="display: none;">
+        <div class="detail-view-content">
+            <div class="detail-view-header">
+                <h3>Calculation</h3>
+                <button class="close-detail-view" id="closeCalculation">×</button>
+            </div>
+            <div class="detail-view-body" style="display: flex; gap: 16px;">
+                <div style="flex: 1; background: #1a1a1a; border: 1px solid #333; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="calculationPreview" style="max-width: 100%; max-height: 100%;"></canvas>
+                </div>
+                <div style="flex: 1;">
+                    <div style="margin-bottom: 8px;">
+                        <label>Loom Type</label>
+                        <select id="loomType" class="tool-dropdown">
+                            <option value="boardloom">boardloom</option>
+                            <option value="needleloom">needleloom</option>
+                            <option value="shuttle_loom">shuttle loom</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <label>Mother Pattern</label>
+                        <select id="motherPattern" class="tool-dropdown">
+                            <option value="plain">plain</option>
+                            <option value="twill">twill</option>
+                            <option value="herringbone">herringbone</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div style="display:flex; align-items:center; justify-content: space-between;">
+                            <h4>Sons</h4>
+                            <button class="btn-secondary" id="addSonBtn">+ Add Son</button>
+                        </div>
+                        <div id="sonsList"></div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <h4>Mother/Sons Summary</h4>
+                        <div id="calcSummary" style="font-size: 12px; color: #ccc;"></div>
+                    </div>
+                    <div style="margin-top: 12px; display:flex; gap: 8px;">
+                        <button class="btn-primary" id="analyzeCalcBtn">Analyze</button>
+                        <button class="btn-secondary" id="saveCalcBtn">Save</button>
+                        <button class="btn-secondary" id="closeCalcBtn">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="app.js?v=2.1.2"></script>
-    <script src="canvas-tools.js?v=2.1.2"></script>
-    <script src="image-processor.js?v=2.1.2"></script>
-    <script src="calculator.js?v=2.1.2"></script>
+    <script src="app.js?v=2.1.3"></script>
+    <script src="canvas-tools.js?v=2.1.3"></script>
+    <script src="image-processor.js?v=2.1.3"></script>
+    <script src="calculator.js?v=2.1.3"></script>
 </body>
 </html>

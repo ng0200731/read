@@ -1,5 +1,5 @@
 // Application Version
-const APP_VERSION = "2.1.2";
+const APP_VERSION = "2.1.3";
 
 // Main Application Controller
 class ImageAnalysisApp {
@@ -181,6 +181,22 @@ class ImageAnalysisApp {
             if (e.target.id === 'detailViewModal') {
                 this.closeDetailView();
             }
+        });
+        // Calculation modal events
+        document.getElementById('openCalculationBtn').addEventListener('click', () => {
+            this.openCalculationModal();
+        });
+        document.getElementById('closeCalculation').addEventListener('click', () => {
+            this.closeCalculationModal();
+        });
+        document.getElementById('closeCalcBtn').addEventListener('click', () => {
+            this.closeCalculationModal();
+        });
+        document.getElementById('analyzeCalcBtn').addEventListener('click', () => {
+            this.runCalculationAnalysis();
+        });
+        document.getElementById('addSonBtn').addEventListener('click', () => {
+            this.addSonRow();
         });
 
 
@@ -1043,7 +1059,7 @@ class ImageAnalysisApp {
 
     enableControls() {
         const buttons = [
-            'calibrateBtn', 'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn',
+            'calibrateBtn', 'zoomInBtn', 'zoomOutBtn', 'resetZoomBtn', 'detailViewBtn', 'openCalculationBtn',
             'rotateLeftBtn', 'rotateRightBtn',
             'exportDataBtn', 'exportImageBtn'
         ];
@@ -1263,12 +1279,12 @@ class ImageAnalysisApp {
         const p1 = this.calibrationPoints[0];
         const p2 = this.calibrationPoints[1];
         const pixelDistance = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-        
+
         this.scale = pixelDistance / realMeasurement; // pixels per mm
-        
+
         this.isCalibrating = false;
         this.calibrationPoints = [];
-        
+
         document.getElementById('calibrationInput').style.display = 'none';
         document.getElementById('realMeasurement').value = '';
         document.getElementById('realMeasurement').disabled = true; // Disable input after success
@@ -1276,7 +1292,7 @@ class ImageAnalysisApp {
         document.getElementById('calibrateBtn').textContent = 'Set Scale';
         document.getElementById('calibrateBtn').disabled = false;
         document.getElementById('canvasInstructions').textContent = 'Scale calibrated successfully';
-        
+
         this.updateScaleInfo();
         this.updateImageInfo();
         this.updateDetectionToolsState(); // Enable detection tools now that scale is set
@@ -1286,13 +1302,13 @@ class ImageAnalysisApp {
     cancelCalibration() {
         this.isCalibrating = false;
         this.calibrationPoints = [];
-        
+
         document.getElementById('calibrationInput').style.display = 'none';
         document.getElementById('realMeasurement').value = '';
         document.getElementById('calibrateBtn').textContent = 'Set Scale';
         document.getElementById('calibrateBtn').disabled = false;
         document.getElementById('canvasInstructions').textContent = 'Calibration cancelled';
-        
+
         this.drawImage();
     }
 
@@ -1746,6 +1762,144 @@ class ImageAnalysisApp {
                 coordinates: shape.points || shape
             })),
             totalArea: this.shapes.reduce((sum, shape) => sum + this.calculateShapeArea(shape), 0)
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'image-analysis-data.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    // Calculation modal methods
+    openCalculationModal() {
+        const modal = document.getElementById('calculationModal');
+        modal.style.display = 'block';
+        this.renderCalculationPreview();
+        this.populateSonsFromContainment();
+        this.updateCalculationSummary();
+    }
+
+    closeCalculationModal() {
+        const modal = document.getElementById('calculationModal');
+        modal.style.display = 'none';
+    }
+
+    renderCalculationPreview() {
+        const preview = document.getElementById('calculationPreview');
+        const ctx = preview.getContext('2d');
+        // Fit preview to its container (simple strategy)
+        preview.width = 400; preview.height = 300;
+
+        // Draw right-canvas like preview (clean dims view)
+        if (!this.originalImage) { ctx.clearRect(0,0,preview.width,preview.height); return; }
+
+        // Simple scaled draw of the current right-canvas bitmap
+        // Reuse drawRightCanvas into an offscreen? For now, re-render minimal:
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0,0,preview.width,preview.height);
+
+        // Compute image box matching left/right logic
+        const imgAspect = this.originalImage.width / this.originalImage.height;
+        const canvasAspect = preview.width / preview.height;
+        let drawW, drawH;
+        if (imgAspect > canvasAspect) {
+            drawW = preview.width; drawH = drawW / imgAspect;
+        } else {
+            drawH = preview.height; drawW = drawH * imgAspect;
+        }
+        const x = (preview.width - drawW) / 2;
+        const y = (preview.height - drawH) / 2;
+        ctx.drawImage(this.originalImage, x, y, drawW, drawH);
+
+        // Overlay shapes without dimensions (simple):
+        const imageInfo = { x, y, width: drawW, height: drawH, originalWidth: this.originalImage.width, originalHeight: this.originalImage.height };
+        if (window.CanvasTools) {
+            window.CanvasTools.drawShapesWithoutDimensions(ctx, this.shapes, 1, 0, 0, imageInfo);
+        }
+    }
+
+    // Identify mother = largest rectangle; sons = rectangles fully contained in mother
+    analyzeMotherSons() {
+        const rects = this.shapes.filter(s => s.type === 'rectangle');
+        if (rects.length === 0) return { motherIndex: -1, sons: [] };
+
+        const areaOf = (r) => Math.abs(r.width * r.height);
+        let motherIndex = 0;
+        for (let i=1;i<rects.length;i++) {
+            if (areaOf(rects[i]) > areaOf(rects[motherIndex])) motherIndex = i;
+        }
+        const mother = rects[motherIndex];
+        const contains = (outer, inner) => {
+            const x1 = inner.x, y1 = inner.y, x2 = inner.x + inner.width, y2 = inner.y + inner.height;
+            return x1 >= outer.x && y1 >= outer.y && x2 <= outer.x + outer.width && y2 <= outer.y + outer.height;
+        };
+        const sons = rects.map((r, idx) => ({ r, idx })).filter((o, i) => i !== motherIndex && contains(mother, o.r));
+        return { motherIndex, sons };
+    }
+
+    populateSonsFromContainment() {
+        const list = document.getElementById('sonsList');
+        list.innerHTML = '';
+        const { motherIndex, sons } = this.analyzeMotherSons();
+        // Add a row for each son, default type "damask"
+        sons.forEach((s, i) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '8px';
+            row.style.alignItems = 'center';
+            row.style.margin = '4px 0';
+            row.innerHTML = `
+                <span>${i+1})</span>
+                <label>Son Type:</label>
+                <select class="tool-dropdown son-type">
+                    <option value="damask">damask</option>
+                    <option value="double_damask">double damask</option>
+                </select>
+                <button class="btn-secondary remove-son">- Remove</button>
+            `;
+            row.querySelector('.remove-son').addEventListener('click', () => row.remove());
+            list.appendChild(row);
+        });
+        if (sons.length === 0) {
+            list.innerHTML = '<small>No sons found (no rectangles fully inside the mother)</small>';
+        }
+    }
+
+    addSonRow() {
+        const list = document.getElementById('sonsList');
+        const count = list.querySelectorAll('div').length + 1;
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.alignItems = 'center';
+        row.style.margin = '4px 0';
+        row.innerHTML = `
+            <span>${count})</span>
+            <label>Son Type:</label>
+            <select class="tool-dropdown son-type">
+                <option value="damask">damask</option>
+                <option value="double_damask">double damask</option>
+            </select>
+            <button class="btn-secondary remove-son">- Remove</button>
+        `;
+        row.querySelector('.remove-son').addEventListener('click', () => row.remove());
+        list.appendChild(row);
+    }
+
+    runCalculationAnalysis() {
+        const summary = document.getElementById('calcSummary');
+        const { motherIndex, sons } = this.analyzeMotherSons();
+        if (motherIndex === -1) { summary.textContent = 'No rectangles found.'; return; }
+        const rects = this.shapes.filter(s => s.type === 'rectangle');
+        const mother = rects[motherIndex];
+        const pxArea = Math.abs(mother.width * mother.height);
+        const mmArea = this.scale > 0 ? pxArea / (this.scale * this.scale) : null;
+        const sonsAreaPx = sons.reduce((sum, s) => sum + Math.abs(s.r.width * s.r.height), 0);
+        const sonsAreaMm = this.scale > 0 ? sonsAreaPx / (this.scale * this.scale) : null;
+        const fitText = sons.length > 0 ? `Mother supports ${sons.length} sons.` : 'No sons.';
+        summary.textContent = `Mother: Rect #${motherIndex+1} | Area: ${mmArea ? mmArea.toFixed(1)+' mm²' : pxArea+' px²'} | Sons: ${sons.length} | Sons total area: ${sonsAreaMm ? sonsAreaMm.toFixed(1)+' mm²' : sonsAreaPx+' px²'} | ${fitText}`;
+    }
         };
 
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
